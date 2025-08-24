@@ -1,13 +1,9 @@
 
 import React from 'react';
 import { X, Mail, Phone, GraduationCap, PhoneCall, MessageCircle } from 'lucide-react';
+import { Lawyer } from '../services/lawyerService';
 
-interface DetailedLawyer {
-  id: string;
-  name: string;
-  image?: string;
-  isOnline: boolean;
-  verified: boolean;
+interface DetailedLawyer extends Lawyer {
   email?: string;
   phoneNumber?: string;
   bio?: string;
@@ -16,24 +12,9 @@ interface DetailedLawyer {
     institution: string;
     year: string;
   }>;
-  experience: number;
-  rating: number;
-  reviews: number;
   specializationNames?: string[];
-  specializations: string[];
-  availability: {
-    audio: boolean;
-    video: boolean;
-    chat: boolean;
-  };
-  pricing: {
-    audio: number;
-    video: number;
-    chat: number;
-  };
-  connections: number;
-  lastActive?: Date;
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface LawyerModalProps {

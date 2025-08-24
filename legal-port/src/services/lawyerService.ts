@@ -15,7 +15,7 @@ export interface Lawyer {
     video: number;
     chat: number;
   };
-  image: string;
+  image?: string;
   connections: number;
   verified: boolean;
   availability: {
