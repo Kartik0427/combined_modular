@@ -1,30 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { User, DollarSign, MessageSquare, Mail, Star, LogOut, RefreshCw, Scale, BarChart3, Settings, Inbox } from 'lucide-react';
+import { subscribeToConsultationRequests, getRequestStats } from '../services/consultationService';
+import ConsultationRequestsList from '../components/ConsultationRequestsList';
 
-const Dashboard = ({ user, balance, setCurrentPage, handleLogout }) => {
-  const [incomingCall, setIncomingCall] = useState(false);
-  const [analyticsView, setAnalyticsView] = useState('week');
+const Dashboard = ({ user, balance, setCurrentPage, handleLogout, consultationRequests = [], requestStats = {} }) => {
+  // Remove local state since data now comes from props
+  console.log('Dashboard - Received props:', { user, consultationRequests, requestStats });
 
-  // Mock analytics data
-  const analyticsData = {
-    week: [12, 19, 15, 27, 22, 18, 25],
-    month: [45, 52, 48, 61, 58, 65, 72, 69, 75, 68, 82, 89, 95, 88, 92, 98, 105, 102, 110, 115, 108, 120, 118, 125, 128, 135, 132, 140, 138, 145],
-    year: [450, 520, 480, 610, 580, 650, 720, 690, 750, 680, 820, 890]
-  };
-
-  const labels = {
-    week: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    month: ['Jan 1', 'Jan 5', 'Jan 10', 'Jan 15', 'Jan 20', 'Jan 25', 'Feb 1', 'Feb 5', 'Feb 10', 'Feb 15', 'Feb 20', 'Feb 25', 'Mar 1', 'Mar 5', 'Mar 10', 'Mar 15', 'Mar 20', 'Mar 25', 'Apr 1', 'Apr 5', 'Apr 10', 'Apr 15', 'Apr 20', 'Apr 25', 'May 1', 'May 5', 'May 10', 'May 15', 'May 20', 'May 25'],
-    year: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIncomingCall(prev => !prev);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
+  // Removed the useEffect hook for fetching data as it's now handled by the parent component (LawyerPortal)
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#22223B] via-[#4A4E69] to-[#9A8C98] p-6">
@@ -47,26 +30,49 @@ const Dashboard = ({ user, balance, setCurrentPage, handleLogout }) => {
             </div>
           </div>
         </div>
-  
-          
 
-
-
-        {/* Status Card */}
+        {/* Consultation Requests Status Card */}
         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-6 shadow-2xl">
-          <div className="flex items-center justify-between">
-            <span className="text-white font-medium">Client Status</span>
-            <RefreshCw className={`w-5 h-5 text-[#F2E9E4] ${incomingCall ? 'animate-spin' : ''}`} />
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-white font-medium">Consultation Requests</span>
+            <Inbox className="w-5 h-5 text-[#F2E9E4]" />
           </div>
-          <div className="mt-3">
-            {incomingCall ? (
-              <div className="text-sm text-[#C9ADA7] animate-pulse flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#C9ADA7] rounded-full"></div>
-                Incoming consultation request...
-              </div>
-            ) : (
-              <div className="text-sm text-white/60">No pending consultations</div>
-            )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-400">{requestStats.pending || 0}</div>
+              <div className="text-xs text-white/70">Pending</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">{requestStats.accepted || 0}</div>
+              <div className="text-xs text-white/70">Accepted</div>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-white/20">
+            <div className="text-sm text-white/60">
+              Total: {requestStats.total || 0} | Completed: {requestStats.completed || 0}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Consultation Requests */}
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-6 shadow-2xl">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-white font-medium">Recent Requests</span>
+            <button
+              onClick={() => setCurrentPage('requests')}
+              className="text-[#F2E9E4] hover:text-white text-sm underline"
+            >
+              View All
+            </button>
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            <ConsultationRequestsList
+              requests={consultationRequests.slice(0, 3)}
+              onStatusUpdate={() => {
+                // Refresh will happen automatically via the subscription
+                console.log('Request status updated');
+              }}
+            />
           </div>
         </div>
 
