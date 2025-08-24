@@ -1,15 +1,20 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
-import { Filter, X, Search } from 'lucide-react';
-import { fetchLawyers, Lawyer } from '../services/lawyerService';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { submitConsultationRequest, validateUserInfo, formatPhoneNumber, UserInfoFormData, ConsultationRequestData } from '../services/consultationRequestService';
-import { useAuth } from '../context/AuthContext';
-import LawyerCard from './LawyerCard';
-import LawyerModal from './LawyerModal';
-import ConsultationModal from './ConsultationModal';
-import FilterSidebar from './FilterSidebar';
+import React, { useState, useMemo, useEffect } from "react";
+import { Filter, X, Search } from "lucide-react";
+import { fetchLawyers, Lawyer } from "../services/lawyerService";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
+import {
+  submitConsultationRequest,
+  validateUserInfo,
+  formatPhoneNumber,
+  UserInfoFormData,
+  ConsultationRequestData,
+} from "../services/consultationRequestService";
+import { useAuth } from "../context/AuthContext";
+import LawyerCard from "./LawyerCard";
+import LawyerModal from "./LawyerModal";
+import ConsultationModal from "./ConsultationModal";
+import FilterSidebar from "./FilterSidebar";
 
 interface Filters {
   maxAudioRate: number;
@@ -19,8 +24,14 @@ interface Filters {
   minExperience: number;
   onlineOnly: boolean;
   specializations: string[];
-  sortBy: 'rating' | 'experience' | 'audioRate' | 'videoRate' | 'chatRate' | 'name';
-  sortOrder: 'asc' | 'desc';
+  sortBy:
+    | "rating"
+    | "experience"
+    | "audioRate"
+    | "videoRate"
+    | "chatRate"
+    | "name";
+  sortOrder: "asc" | "desc";
 }
 
 interface DetailedLawyer extends Lawyer {
@@ -43,21 +54,27 @@ const LawyerCatalogue: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLawyer, setSelectedLawyer] = useState<DetailedLawyer | null>(null);
+  const [selectedLawyer, setSelectedLawyer] = useState<DetailedLawyer | null>(
+    null,
+  );
   const [modalLoading, setModalLoading] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
-  const [consultationServiceType, setConsultationServiceType] = useState<'audio' | 'video' | 'chat'>('video');
-  const [consultationLawyer, setConsultationLawyer] = useState<Lawyer | null>(null);
+  const [consultationServiceType, setConsultationServiceType] = useState<
+    "audio" | "video" | "chat"
+  >("video");
+  const [consultationLawyer, setConsultationLawyer] = useState<Lawyer | null>(
+    null,
+  );
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [userInfoForm, setUserInfoForm] = useState<UserInfoFormData>({
-    name: '',
-    email: '',
-    phoneNumber: '',
-    message: ''
+    name: "",
+    email: "",
+    phoneNumber: "",
+    message: "",
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [filters, setFilters] = useState<Filters>({
     maxAudioRate: 40,
@@ -67,8 +84,8 @@ const LawyerCatalogue: React.FC = () => {
     minExperience: 0,
     onlineOnly: false,
     specializations: [],
-    sortBy: 'rating',
-    sortOrder: 'desc'
+    sortBy: "rating",
+    sortOrder: "desc",
   });
 
   useEffect(() => {
@@ -76,26 +93,32 @@ const LawyerCatalogue: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Request timeout - please try again')), 15000);
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error("Request timeout - please try again")),
+            15000,
+          );
         });
 
         const fetchedLawyers = await Promise.race([
           fetchLawyers(),
-          timeoutPromise
-        ]) as Lawyer[];
+          timeoutPromise,
+        ]);
 
         if (fetchedLawyers.length === 0) {
-          setError('No lawyers available at the moment. Please try again later.');
+          setError(
+            "No lawyers available at the moment. Please try again later.",
+          );
         } else {
           setLawyers(fetchedLawyers);
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load lawyers';
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load lawyers";
         setError(errorMessage);
-        console.error('Error loading lawyers:', err);
-        
+        console.error("Error loading lawyers:", err);
+
         setTimeout(() => {
           if (lawyers.length === 0) {
             loadLawyers();
@@ -112,25 +135,29 @@ const LawyerCatalogue: React.FC = () => {
   const filteredAndSortedLawyers = useMemo(() => {
     if (!lawyers || lawyers.length === 0) return [];
 
-    let filtered = lawyers.filter(lawyer => {
+    let filtered = lawyers.filter((lawyer) => {
       if (!lawyer || !lawyer.name) return false;
 
       const searchLower = searchTerm.toLowerCase().trim();
-      const matchesSearch = !searchLower || 
+      const matchesSearch =
+        !searchLower ||
         lawyer.name.toLowerCase().includes(searchLower) ||
-        lawyer.specializations.some(spec => 
-          spec && spec.toLowerCase().includes(searchLower)
+        lawyer.specializations.some(
+          (spec) => spec && spec.toLowerCase().includes(searchLower),
         );
-      
+
       if (!matchesSearch) return false;
 
-      const matchesSpecialization = filters.specializations.length === 0 ||
-        filters.specializations.some(filterSpec => 
-          lawyer.specializations.some(lawyerSpec => 
-            lawyerSpec && lawyerSpec.toLowerCase().includes(filterSpec.toLowerCase())
-          )
+      const matchesSpecialization =
+        filters.specializations.length === 0 ||
+        filters.specializations.some((filterSpec) =>
+          lawyer.specializations.some(
+            (lawyerSpec) =>
+              lawyerSpec &&
+              lawyerSpec.toLowerCase().includes(filterSpec.toLowerCase()),
+          ),
         );
-      
+
       if (!matchesSpecialization) return false;
 
       return (
@@ -148,27 +175,27 @@ const LawyerCatalogue: React.FC = () => {
       let bValue: number | string;
 
       switch (filters.sortBy) {
-        case 'rating':
+        case "rating":
           aValue = a.rating;
           bValue = b.rating;
           break;
-        case 'experience':
+        case "experience":
           aValue = a.experience;
           bValue = b.experience;
           break;
-        case 'audioRate':
+        case "audioRate":
           aValue = a.pricing.audio;
           bValue = b.pricing.audio;
           break;
-        case 'videoRate':
+        case "videoRate":
           aValue = a.pricing.video;
           bValue = b.pricing.video;
           break;
-        case 'chatRate':
+        case "chatRate":
           aValue = a.pricing.chat;
           bValue = b.pricing.chat;
           break;
-        case 'name':
+        case "name":
           aValue = a.name;
           bValue = b.name;
           break;
@@ -177,7 +204,7 @@ const LawyerCatalogue: React.FC = () => {
           bValue = b.rating;
       }
 
-      if (filters.sortOrder === 'asc') {
+      if (filters.sortOrder === "asc") {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
@@ -186,57 +213,72 @@ const LawyerCatalogue: React.FC = () => {
   }, [lawyers, filters, searchTerm]);
 
   const updateFilter = (key: keyof Filters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const fetchDetailedLawyerData = async (lawyerId: string): Promise<DetailedLawyer | null> => {
+  const fetchDetailedLawyerData = async (
+    lawyerId: string,
+  ): Promise<DetailedLawyer | null> => {
     try {
-      const lawyerRef = doc(db, 'lawyer_profiles', lawyerId);
+      const lawyerRef = doc(db, "lawyer_profiles", lawyerId);
       const lawyerDoc = await getDoc(lawyerRef);
-      
+
       if (!lawyerDoc.exists()) {
-        throw new Error('Lawyer not found');
+        throw new Error("Lawyer not found");
       }
 
       const data = lawyerDoc.data();
-      const basicLawyer = lawyers.find(l => l.id === lawyerId);
-      
+      const basicLawyer = lawyers.find((l) => l.id === lawyerId);
+
       if (!basicLawyer) {
-        throw new Error('Lawyer data not found in local state');
+        throw new Error("Lawyer data not found in local state");
       }
 
       return {
         ...basicLawyer,
-        email: data.email || '',
-        phoneNumber: data.phoneNumber || '',
-        bio: data.bio || '',
-        education: Array.isArray(data.education) && data.education.length > 0 
-          ? data.education 
-          : [{ degree: "", institution: "", year: "" }],
+        email: data.email || "",
+        phoneNumber: data.phoneNumber || "",
+        bio: data.bio || "",
+        education:
+          Array.isArray(data.education) && data.education.length > 0
+            ? data.education
+            : [{ degree: "", institution: "", year: "" }],
         createdAt: data.createdAt?.toDate(),
         updatedAt: data.updatedAt?.toDate(),
-        specializationNames: basicLawyer.specializations
+        specializationNames: basicLawyer.specializations,
       };
     } catch (error) {
-      console.error('Error fetching detailed lawyer data:', error);
+      console.error("Error fetching detailed lawyer data:", error);
       return null;
     }
   };
 
-  const openModal = async (lawyer: Lawyer) => {
+  // Fixed: Change return type to void and make function non-async for the prop
+  const openModal = (lawyer: Lawyer): void => {
     setModalLoading(true);
     setIsModalOpen(true);
-    
-    const detailedData = await fetchDetailedLawyerData(lawyer.id);
-    if (detailedData) {
-      setSelectedLawyer(detailedData);
-    } else {
-      setSelectedLawyer({
-        ...lawyer,
-        specializationNames: lawyer.specializations
+
+    // Move async logic inside but don't return a promise
+    fetchDetailedLawyerData(lawyer.id)
+      .then((detailedData) => {
+        if (detailedData) {
+          setSelectedLawyer(detailedData);
+        } else {
+          setSelectedLawyer({
+            ...lawyer,
+            specializationNames: lawyer.specializations,
+          });
+        }
+        setModalLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching detailed lawyer data:", error);
+        setSelectedLawyer({
+          ...lawyer,
+          specializationNames: lawyer.specializations,
+        });
+        setModalLoading(false);
       });
-    }
-    setModalLoading(false);
   };
 
   const closeModal = () => {
@@ -253,15 +295,18 @@ const LawyerCatalogue: React.FC = () => {
       minExperience: 0,
       onlineOnly: false,
       specializations: [],
-      sortBy: 'rating',
-      sortOrder: 'desc'
+      sortBy: "rating",
+      sortOrder: "desc",
     });
-    setSearchTerm('');
+    setSearchTerm("");
   };
 
-  const handleConsultationRequest = (lawyer: Lawyer, serviceType: 'audio' | 'video' | 'chat') => {
+  const handleConsultationRequest = (
+    lawyer: Lawyer,
+    serviceType: "audio" | "video" | "chat",
+  ) => {
     if (!user) {
-      alert('Please login to request a consultation');
+      alert("Please login to request a consultation");
       return;
     }
 
@@ -272,9 +317,9 @@ const LawyerCatalogue: React.FC = () => {
 
   const handleUserInfoFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user || !consultationLawyer) {
-      alert('Please login to submit a consultation request');
+      alert("Please login to submit a consultation request");
       return;
     }
 
@@ -297,39 +342,40 @@ const LawyerCatalogue: React.FC = () => {
         userInfo: {
           name: userInfoForm.name,
           email: userInfoForm.email,
-          phoneNumber: formatPhoneNumber(userInfoForm.phoneNumber)
-        }
+          phoneNumber: formatPhoneNumber(userInfoForm.phoneNumber),
+        },
       };
 
       const requestId = await submitConsultationRequest(requestData);
-      
-      alert('Consultation request submitted successfully! The lawyer will respond shortly.');
-      
-      setUserInfoForm({ name: '', email: '', phoneNumber: '', message: '' });
+
+      alert(
+        "Consultation request submitted successfully! The lawyer will respond shortly.",
+      );
+
+      setUserInfoForm({ name: "", email: "", phoneNumber: "", message: "" });
       setIsConsultationModalOpen(false);
       setConsultationLawyer(null);
-      
     } catch (error) {
-      console.error('Error submitting consultation request:', error);
-      alert('Failed to submit consultation request. Please try again.');
+      console.error("Error submitting consultation request:", error);
+      alert("Failed to submit consultation request. Please try again.");
     } finally {
       setConsultationLoading(false);
     }
   };
 
   const handleInputChange = (field: keyof UserInfoFormData, value: string) => {
-    setUserInfoForm(prev => ({ ...prev, [field]: value }));
+    setUserInfoForm((prev) => ({ ...prev, [field]: value }));
     if (formErrors.length > 0) {
       setFormErrors([]);
     }
   };
 
   const toggleSpecialization = (specialization: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       specializations: prev.specializations.includes(specialization)
-        ? prev.specializations.filter(s => s !== specialization)
-        : [...prev.specializations, specialization]
+        ? prev.specializations.filter((s) => s !== specialization)
+        : [...prev.specializations, specialization],
     }));
   };
 
@@ -342,9 +388,10 @@ const LawyerCatalogue: React.FC = () => {
             Find Your Perfect <span className="text-gold">Legal Expert</span>
           </h1>
           <p className="text-gray-300 text-xl mb-8 max-w-2xl mx-auto leading-relaxed">
-            Connect with verified lawyers instantly via chat, call, or video consultation
+            Connect with verified lawyers instantly via chat, call, or video
+            consultation
           </p>
-          
+
           {/* Search Bar */}
           <div className="max-w-xl mx-auto mb-8">
             <div className="relative">
@@ -388,7 +435,9 @@ const LawyerCatalogue: React.FC = () => {
                   <div className="text-gray-400 mb-6">
                     <div className="w-20 h-20 mx-auto opacity-50 animate-spin rounded-full border-4 border-gold border-t-transparent"></div>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">Loading lawyers...</h3>
+                  <h3 className="text-2xl font-bold text-white mb-4">
+                    Loading lawyers...
+                  </h3>
                   <p className="text-gray-300 leading-relaxed">
                     Please wait while we fetch the latest lawyer profiles
                   </p>
@@ -400,10 +449,10 @@ const LawyerCatalogue: React.FC = () => {
                   <div className="text-red-400 mb-6">
                     <X className="w-20 h-20 mx-auto opacity-50" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">Error loading lawyers</h3>
-                  <p className="text-gray-300 mb-8 leading-relaxed">
-                    {error}
-                  </p>
+                  <h3 className="text-2xl font-bold text-white mb-4">
+                    Error loading lawyers
+                  </h3>
+                  <p className="text-gray-300 mb-8 leading-relaxed">{error}</p>
                   <button
                     onClick={() => window.location.reload()}
                     className="bg-gradient-to-r from-gold to-yellow-600 hover:from-yellow-600 hover:to-gold text-dark-blue py-3 px-8 rounded-xl font-bold transition-all duration-300 shadow-lg shadow-gold/25 hover:shadow-xl hover:scale-105"
@@ -414,10 +463,10 @@ const LawyerCatalogue: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8">
-                {filteredAndSortedLawyers.map(lawyer => (
-                  <LawyerCard 
-                    key={lawyer.id} 
-                    lawyer={lawyer} 
+                {filteredAndSortedLawyers.map((lawyer) => (
+                  <LawyerCard
+                    key={lawyer.id}
+                    lawyer={lawyer}
                     onViewProfile={openModal}
                     onConsultationRequest={handleConsultationRequest}
                   />
@@ -432,9 +481,12 @@ const LawyerCatalogue: React.FC = () => {
                   <div className="text-gray-400 mb-6">
                     <Filter className="w-20 h-20 mx-auto opacity-50" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">No lawyers found</h3>
+                  <h3 className="text-2xl font-bold text-white mb-4">
+                    No lawyers found
+                  </h3>
                   <p className="text-gray-300 mb-8 leading-relaxed">
-                    Try adjusting your search terms or filters to discover more legal experts
+                    Try adjusting your search terms or filters to discover more
+                    legal experts
                   </p>
                   <button
                     onClick={resetFilters}
@@ -450,8 +502,9 @@ const LawyerCatalogue: React.FC = () => {
       </div>
 
       {/* CSS Styles */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .slider::-webkit-slider-thumb {
           appearance: none;
           height: 24px;
@@ -516,9 +569,10 @@ const LawyerCatalogue: React.FC = () => {
           transform: scale(1.3);
           box-shadow: 0 8px 24px rgba(235, 150, 1, 0.8);
         }
-        `
-      }} />
-      
+        `,
+        }}
+      />
+
       {/* Modals */}
       <LawyerModal
         isOpen={isModalOpen}
