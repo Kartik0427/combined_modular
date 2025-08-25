@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Star, Phone, MessageCircle, User, CheckCircle, MapPin } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface Lawyer {
   id: string;
@@ -28,10 +29,20 @@ interface LawyerCardProps {
   lawyer: Lawyer;
   onViewProfile: (lawyer: Lawyer) => void;
   onConsultationRequest: (lawyer: Lawyer, serviceType: 'audio' | 'video' | 'chat') => void;
+  onAuthRequired: () => void;
 }
 
-const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onViewProfile, onConsultationRequest }) => {
+const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onViewProfile, onConsultationRequest, onAuthRequired }) => {
   const [selectedCallType, setSelectedCallType] = useState<'audio' | 'video' | 'chat'>('video');
+  const { user } = useAuth();
+
+  const handleConsultationClick = (serviceType: 'audio' | 'video' | 'chat') => {
+    if (!user) {
+      onAuthRequired();
+      return;
+    }
+    onConsultationRequest(lawyer, serviceType);
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden border border-gray-100 group cursor-pointer">
@@ -136,34 +147,24 @@ const LawyerCard: React.FC<LawyerCardProps> = ({ lawyer, onViewProfile, onConsul
 
         <div className="grid grid-cols-2 gap-2">
           <button 
-            disabled={!lawyer.availability?.[selectedCallType]}
             onClick={(e) => {
               e.stopPropagation();
-              onConsultationRequest(lawyer, selectedCallType);
+              handleConsultationClick(selectedCallType);
             }}
-            className={`py-2 px-3 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all duration-200 ${
-              lawyer.availability?.[selectedCallType]
-                ? 'bg-gradient-to-r from-gold to-yellow-600 hover:from-yellow-600 hover:to-gold text-dark-blue'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            className="py-2 px-3 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all duration-200 bg-gradient-to-r from-gold to-yellow-600 hover:from-yellow-600 hover:to-gold text-dark-blue"
           >
             <Phone className="w-3 h-3" />
-            {lawyer.availability?.[selectedCallType] ? 'Consult' : 'Unavailable'}
+            Consult
           </button>
           <button 
-            disabled={!lawyer.availability?.chat}
             onClick={(e) => {
               e.stopPropagation();
-              onConsultationRequest(lawyer, 'chat');
+              handleConsultationClick('chat');
             }}
-            className={`border py-2 px-3 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all duration-200 ${
-              lawyer.availability?.chat
-                ? 'border-gray-300 hover:border-gold text-gray-700 hover:text-gold'
-                : 'border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed'
-            }`}
+            className="border py-2 px-3 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all duration-200 border-gray-300 hover:border-gold text-gray-700 hover:text-gold"
           >
             <MessageCircle className="w-3 h-3" />
-            {lawyer.availability?.chat ? 'Message' : 'Unavailable'}
+            Message
           </button>
         </div>
 

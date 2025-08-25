@@ -15,6 +15,7 @@ import LawyerCard from "./LawyerCard";
 import LawyerModal from "./LawyerModal";
 import ConsultationModal from "./ConsultationModal";
 import FilterSidebar from "./FilterSidebar";
+import AuthModal from "./AuthModal";
 
 interface Filters {
   maxAudioRate: number;
@@ -75,6 +76,7 @@ const LawyerCatalogue: React.FC = () => {
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const [filters, setFilters] = useState<Filters>({
     maxAudioRate: 40,
@@ -305,14 +307,13 @@ const LawyerCatalogue: React.FC = () => {
     lawyer: Lawyer,
     serviceType: "audio" | "video" | "chat",
   ) => {
-    if (!user) {
-      alert("Please login to request a consultation");
-      return;
-    }
-
     setConsultationLawyer(lawyer);
     setConsultationServiceType(serviceType);
     setIsConsultationModalOpen(true);
+  };
+
+  const handleAuthRequired = () => {
+    setIsAuthModalOpen(true);
   };
 
   const handleUserInfoFormSubmit = async (e: React.FormEvent) => {
@@ -469,6 +470,7 @@ const LawyerCatalogue: React.FC = () => {
                     lawyer={lawyer}
                     onViewProfile={openModal}
                     onConsultationRequest={handleConsultationRequest}
+                    onAuthRequired={handleAuthRequired}
                   />
                 ))}
               </div>
@@ -592,6 +594,12 @@ const LawyerCatalogue: React.FC = () => {
         onClose={() => setIsConsultationModalOpen(false)}
         onSubmit={handleUserInfoFormSubmit}
         onInputChange={handleInputChange}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        mode="login"
       />
     </div>
   );
