@@ -77,11 +77,7 @@ export default function App() {
             />
             <Route 
               path="/catalogue" 
-              element={
-                <ProtectedRoute>
-                  <Catalogue />
-                </ProtectedRoute>
-              } 
+              element={<Catalogue />} 
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
