@@ -16,6 +16,7 @@ localPort = 5173
 externalPort = 5173
 
 [workflows]
+runButton = "Start Legal Port"
 
 [[workflows.workflow]]
 name = "legal-port"
@@ -29,3 +30,12 @@ args = "cd legal-port"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm start"
+
+[[workflows.workflow]]
+name = "Start Legal Port"
+author = 46775612
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd legal-port && npm start"
