@@ -141,6 +141,21 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Address *
+              </label>
+              <textarea
+                value={userInfoForm.address || ''}
+                onChange={(e) => onInputChange('address', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-gold transition-colors"
+                placeholder="Enter your full address"
+                required
+                disabled={loading}
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Describe Your Legal Issue *
               </label>
               <textarea

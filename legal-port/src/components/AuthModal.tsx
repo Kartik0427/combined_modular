@@ -14,6 +14,7 @@ import {
   signInWithPopup,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
   RecaptchaVerifier,
   signInWithPhoneNumber,
   ConfirmationResult,
@@ -46,13 +47,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [address, setAddress] = useState('');
   const [countryCode, setCountryCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otp, setOtp] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
+  const [showEmailOtpInput, setShowEmailOtpInput] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const createUserDocument = async (user: User, additionalData = {}) => {
@@ -68,6 +74,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           email,
           photoURL,
           createdAt,
+          emailVerified: user.emailVerified,
           ...additionalData
         });
       } catch (error) {
@@ -82,12 +89,17 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
       setName('');
       setEmail('');
       setPassword('');
+      setDateOfBirth('');
+      setAddress('');
       setCountryCode('+91');
       setPhoneNumber('');
       setOtp('');
+      setEmailOtp('');
       setLoading(false);
       setShowOtpInput(false);
+      setShowEmailOtpInput(false);
       setConfirmationResult(null);
+      setEmailVerificationSent(false);
       setError(null);
       setShowPassword(false);
     }
@@ -127,8 +139,20 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
-      await createUserDocument(userCredential.user, { name });
-      onAuthSuccess(userCredential.user);
+      
+      // Send email verification
+      await sendEmailVerification(userCredential.user);
+      setEmailVerificationSent(true);
+      setShowEmailOtpInput(true);
+      
+      await createUserDocument(userCredential.user, { 
+        name, 
+        dateOfBirth, 
+        address,
+        emailVerified: false 
+      });
+      
+      toast.success('Account created! Please check your email for verification.');
     } catch (error: any) {
       setError(error.message);
       toast.error(error.message);
@@ -220,6 +244,33 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
     }
   };
 
+  const handleEmailVerificationCheck = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await user.reload();
+        if (user.emailVerified) {
+          // Update user document with email verified status
+          const userRef = doc(db, 'users', user.uid);
+          await setDoc(userRef, { emailVerified: true }, { merge: true });
+          
+          toast.success('Email verified successfully!');
+          onAuthSuccess(user);
+        } else {
+          setError('Email not verified yet. Please check your email and click the verification link.');
+          toast.error('Email not verified yet. Please check your email.');
+        }
+      }
+    } catch (error: any) {
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePhoneSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -231,6 +282,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         await createUserDocument(user, {
           name,
           email,
+          dateOfBirth,
+          address,
           phoneNumber: user.phoneNumber
         });
         onAuthSuccess(user);
@@ -418,48 +471,107 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
           <div>
             <h2 className="text-2xl font-bold text-center">Create Account</h2>
             <p className="text-center text-gray-500 mt-1 mb-6">Get started with Legal Port</p>
-            <form onSubmit={handleEmailSignUp} className="space-y-4">
-              <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
-                  required 
-                  placeholder="Enter your full name" 
-                />
+            
+            {!showEmailOtpInput ? (
+              <form onSubmit={handleEmailSignUp} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input 
+                    id="name" 
+                    type="text" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)} 
+                    required 
+                    placeholder="Enter your full name" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="signup-email">Email Address</Label>
+                  <Input 
+                    id="signup-email" 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    required 
+                    placeholder="Enter your email" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="date-of-birth">Date of Birth</Label>
+                  <Input 
+                    id="date-of-birth" 
+                    type="date" 
+                    value={dateOfBirth} 
+                    onChange={(e) => setDateOfBirth(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Input 
+                    id="address" 
+                    type="text" 
+                    value={address} 
+                    onChange={(e) => setAddress(e.target.value)} 
+                    required 
+                    placeholder="Enter your full address" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input 
+                    id="signup-password" 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    required 
+                    placeholder="Create a password" 
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full bg-gold text-white hover:bg-gold/90 h-11 text-base"
+                >
+                  {loading ? 'Creating Account...' : 'Sign Up'}
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <Mail className="mx-auto mb-2 text-green-600" size={24} />
+                  <p className="text-sm text-green-700">
+                    Verification email sent to <strong>{email}</strong>
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    Please check your email and click the verification link to continue.
+                  </p>
+                </div>
+                
+                <Button 
+                  onClick={handleEmailVerificationCheck}
+                  disabled={loading} 
+                  className="w-full bg-gold text-white hover:bg-gold/90 h-11 text-base"
+                >
+                  {loading ? 'Checking...' : 'I have verified my email'}
+                </Button>
+                
+                <Button 
+                  onClick={async () => {
+                    const user = auth.currentUser;
+                    if (user) {
+                      await sendEmailVerification(user);
+                      toast.success('Verification email sent again!');
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full h-11 text-base"
+                >
+                  Resend Verification Email
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="signup-email">Email Address</Label>
-                <Input 
-                  id="signup-email" 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  required 
-                  placeholder="Enter your email" 
-                />
-              </div>
-              <div>
-                <Label htmlFor="signup-password">Password</Label>
-                <Input 
-                  id="signup-password" 
-                  type="password" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  required 
-                  placeholder="Create a password" 
-                />
-              </div>
-              <Button 
-                type="submit" 
-                disabled={loading} 
-                className="w-full bg-gold text-white hover:bg-gold/90 h-11 text-base"
-              >
-                {loading ? 'Creating Account...' : 'Sign Up'}
-              </Button>
-            </form>
+            )}
+            
             <p className="text-center text-sm text-gray-600 mt-6">
               Already have an account? <button 
                 onClick={() => setView('signIn')} 
@@ -536,6 +648,27 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                     className="pl-10" 
                   />
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="phone-signup-dob">Date of Birth</Label>
+                <Input 
+                  id="phone-signup-dob" 
+                  type="date" 
+                  value={dateOfBirth} 
+                  onChange={(e) => setDateOfBirth(e.target.value)} 
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone-signup-address">Address</Label>
+                <Input 
+                  id="phone-signup-address" 
+                  type="text" 
+                  value={address} 
+                  onChange={(e) => setAddress(e.target.value)} 
+                  required 
+                  placeholder="Enter your full address" 
+                />
               </div>
               <div>
                 <Label htmlFor="phone-signup-password">Password</Label>
