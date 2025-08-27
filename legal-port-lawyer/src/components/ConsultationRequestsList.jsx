@@ -5,6 +5,8 @@ import { updateConsultationRequestStatus } from '../services/consultationService
 const ConsultationRequestsList = ({ requests, onStatusUpdate }) => {
   const handleStatusUpdate = async (requestId, newStatus, requestData = null) => {
     try {
+      console.log('Handling status update:', { requestId, newStatus, requestData });
+      
       await updateConsultationRequestStatus(requestId, newStatus, requestData);
 
       // If accepted, navigate to chat after a short delay
@@ -20,7 +22,16 @@ const ConsultationRequestsList = ({ requests, onStatusUpdate }) => {
       // The real-time listener will update the UI automatically
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Failed to update request status');
+      console.error('Full error details:', error);
+      
+      let errorMessage = 'Failed to update request status';
+      if (error.message.includes('Permission denied')) {
+        errorMessage = 'Permission denied. Please check your access rights.';
+      } else if (error.message.includes('Missing')) {
+        errorMessage = 'Missing required information. Please refresh and try again.';
+      }
+      
+      alert(errorMessage + '\n\nError: ' + error.message);
     }
   };
 

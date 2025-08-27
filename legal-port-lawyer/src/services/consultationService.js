@@ -46,6 +46,8 @@ export const subscribeToConsultationRequests = (lawyerId, callback) => {
 
 export const updateConsultationRequestStatus = async (requestId, status, requestData = null) => {
   try {
+    console.log('Updating consultation request status:', { requestId, status, requestData });
+    
     const requestRef = doc(db, 'consultation_requests', requestId);
     await updateDoc(requestRef, {
       status,
@@ -53,24 +55,48 @@ export const updateConsultationRequestStatus = async (requestId, status, request
       ...(status === 'accepted' && { acceptedAt: serverTimestamp() })
     });
 
+    console.log('Consultation request status updated successfully');
+
     // If status is accepted, create active session and chat
     if (status === 'accepted' && requestData) {
+      console.log('Creating chat session for accepted request...');
+      
       const { createActiveSession } = await import('./chatService');
+      
+      const clientId = requestData.clientId || requestData.userId;
+      const lawyerId = requestData.lawyerId;
+      
+      if (!clientId || !lawyerId) {
+        throw new Error('Missing clientId or lawyerId in request data');
+      }
       
       const sessionData = await createActiveSession(
         requestId,
-        requestData.clientId || requestData.userId,
-        requestData.lawyerId,
+        clientId,
+        lawyerId,
         requestData.serviceType || 'chat'
       );
       
-      console.log('Active session and chat created:', sessionData);
+      console.log('Chat session created successfully:', sessionData);
     }
 
     return true;
   } catch (error) {
     console.error('Error updating consultation request status:', error);
-    throw new Error('Failed to update request status');
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      requestId,
+      status,
+      requestData
+    });
+    
+    // Provide more specific error messages
+    if (error.message.includes('Permission denied')) {
+      throw new Error('Permission denied: Unable to update request or create chat session');
+    } else {
+      throw new Error(`Failed to update request status: ${error.message}`);
+    }
   }
 };
 

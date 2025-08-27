@@ -20,24 +20,30 @@ export const createActiveSession = async (consultationRequestId, clientId, lawye
   try {
     console.log('Creating chat session for:', { consultationRequestId, clientId, lawyerId, serviceType });
     
+    // Validate required parameters
+    if (!consultationRequestId || !clientId || !lawyerId) {
+      throw new Error('Missing required parameters: consultationRequestId, clientId, or lawyerId');
+    }
+    
     // Create chat session (renamed from active_sessions)
     const chatSessionData = {
-      clientId,
-      lawyerId,
-      consultationRequestId,
-      serviceType,
+      clientId: String(clientId),
+      lawyerId: String(lawyerId),
+      consultationRequestId: String(consultationRequestId),
+      serviceType: serviceType || 'chat',
       status: 'active',
       createdAt: serverTimestamp(),
       lastActivity: serverTimestamp()
     };
 
+    console.log('Attempting to create chat session with data:', chatSessionData);
     const chatSessionRef = await addDoc(collection(db, 'chat_sessions'), chatSessionData);
-    console.log('Chat session created:', chatSessionRef.id);
+    console.log('Chat session created successfully:', chatSessionRef.id);
 
     // Create corresponding chat
     const chatData = {
-      consultationRequestId,
-      participants: [clientId, lawyerId],
+      consultationRequestId: String(consultationRequestId),
+      participants: [String(clientId), String(lawyerId)],
       participantNames: {},
       createdAt: serverTimestamp(),
       lastMessage: 'Chat started',
@@ -46,16 +52,23 @@ export const createActiveSession = async (consultationRequestId, clientId, lawye
       status: 'active'
     };
 
+    console.log('Attempting to create chat with data:', chatData);
     const chatRef = await addDoc(collection(db, 'chats'), chatData);
-    console.log('Chat created:', chatRef.id);
+    console.log('Chat created successfully:', chatRef.id);
 
     // Add initial system message
-    await addDoc(collection(db, 'chats', chatRef.id, 'messages'), {
-      senderId: 'system',
-      messageText: 'Chat session started. You can now communicate with each other.',
-      timestamp: serverTimestamp(),
-      type: 'system'
-    });
+    try {
+      await addDoc(collection(db, 'chats', chatRef.id, 'messages'), {
+        senderId: 'system',
+        messageText: 'Chat session started. You can now communicate with each other.',
+        timestamp: serverTimestamp(),
+        type: 'system'
+      });
+      console.log('Initial system message added successfully');
+    } catch (messageError) {
+      console.warn('Failed to add initial system message:', messageError);
+      // Don't throw here as the chat was created successfully
+    }
 
     return {
       sessionId: chatSessionRef.id,
@@ -63,7 +76,20 @@ export const createActiveSession = async (consultationRequestId, clientId, lawye
     };
   } catch (error) {
     console.error('Error creating chat session:', error);
-    throw new Error('Failed to create chat session');
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // Provide more specific error messages
+    if (error.code === 'permission-denied') {
+      throw new Error('Permission denied: Unable to create chat session. Please check Firebase security rules.');
+    } else if (error.code === 'unavailable') {
+      throw new Error('Firebase service temporarily unavailable. Please try again.');
+    } else {
+      throw new Error(`Failed to create chat session: ${error.message}`);
+    }
   }
 };
 

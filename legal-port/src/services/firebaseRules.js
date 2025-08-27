@@ -36,15 +36,23 @@ service cloud.firestore {
     
     // Chat sessions (renamed from active_sessions)
     match /chat_sessions/{sessionId} {
-      allow read, write: if request.auth != null &&
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.clientId || 
+         request.auth.uid == resource.data.lawyerId);
+      allow create: if request.auth != null &&
+        (request.auth.uid == request.resource.data.clientId || 
+         request.auth.uid == request.resource.data.lawyerId);
+      allow update: if request.auth != null &&
         (request.auth.uid == resource.data.clientId || 
          request.auth.uid == resource.data.lawyerId);
     }
     
     // Chats collection
     match /chats/{chatId} {
-      allow read, write: if request.auth != null && 
+      allow read, update: if request.auth != null && 
         request.auth.uid in resource.data.participants;
+      allow create: if request.auth != null && 
+        request.auth.uid in request.resource.data.participants;
         
       // Messages subcollection under chats
       match /messages/{messageId} {
