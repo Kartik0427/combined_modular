@@ -34,9 +34,9 @@ service cloud.firestore {
          request.auth.uid == resource.data.userId);
     }
     
-    // Active sessions
-    match /active_sessions/{sessionId} {
-      allow read, write: if request.auth != null && 
+    // Chat sessions (renamed from active_sessions)
+    match /chat_sessions/{sessionId} {
+      allow read, write: if request.auth != null &&
         (request.auth.uid == resource.data.clientId || 
          request.auth.uid == resource.data.lawyerId);
     }
@@ -65,7 +65,7 @@ service cloud.firestore {
          request.auth.uid == resource.data.receiverId);
     }
     
-    // Sessions and active sessions (legacy support)
+    // Legacy support for sessions
     match /{path=**}/sessions/{sessionId} {
       allow read, write: if request.auth != null && 
         (request.auth.uid == resource.data.userId || 

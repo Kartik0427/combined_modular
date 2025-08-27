@@ -1,4 +1,5 @@
 
+
 import { db } from '../firebase';
 import { 
   collection, 
@@ -14,13 +15,13 @@ import {
   getDocs 
 } from 'firebase/firestore';
 
-// Create active session when consultation is accepted
+// Create chat session when consultation is accepted
 export const createActiveSession = async (consultationRequestId, clientId, lawyerId, serviceType) => {
   try {
-    console.log('Creating active session for:', { consultationRequestId, clientId, lawyerId, serviceType });
+    console.log('Creating chat session for:', { consultationRequestId, clientId, lawyerId, serviceType });
     
-    // Create active session
-    const activeSessionData = {
+    // Create chat session (renamed from active_sessions)
+    const chatSessionData = {
       clientId,
       lawyerId,
       consultationRequestId,
@@ -30,8 +31,8 @@ export const createActiveSession = async (consultationRequestId, clientId, lawye
       lastActivity: serverTimestamp()
     };
 
-    const activeSessionRef = await addDoc(collection(db, 'active_sessions'), activeSessionData);
-    console.log('Active session created:', activeSessionRef.id);
+    const chatSessionRef = await addDoc(collection(db, 'chat_sessions'), chatSessionData);
+    console.log('Chat session created:', chatSessionRef.id);
 
     // Create corresponding chat
     const chatData = {
@@ -57,20 +58,20 @@ export const createActiveSession = async (consultationRequestId, clientId, lawye
     });
 
     return {
-      sessionId: activeSessionRef.id,
+      sessionId: chatSessionRef.id,
       chatId: chatRef.id
     };
   } catch (error) {
-    console.error('Error creating active session:', error);
-    throw new Error('Failed to create active session');
+    console.error('Error creating chat session:', error);
+    throw new Error('Failed to create chat session');
   }
 };
 
-// Get active session by consultation request ID
+// Get chat session by consultation request ID
 export const getActiveSessionByConsultationId = async (consultationRequestId) => {
   try {
     const q = query(
-      collection(db, 'active_sessions'),
+      collection(db, 'chat_sessions'),
       where('consultationRequestId', '==', consultationRequestId),
       where('status', '==', 'active')
     );
@@ -87,7 +88,7 @@ export const getActiveSessionByConsultationId = async (consultationRequestId) =>
     }
     return null;
   } catch (error) {
-    console.error('Error getting active session:', error);
+    console.error('Error getting chat session:', error);
     return null;
   }
 };
@@ -231,9 +232,9 @@ export const endChatSession = async (chatId, sessionId) => {
       endedAt: serverTimestamp()
     });
 
-    // Update active session status
+    // Update chat session status
     if (sessionId) {
-      const sessionRef = doc(db, 'active_sessions', sessionId);
+      const sessionRef = doc(db, 'chat_sessions', sessionId);
       await updateDoc(sessionRef, {
         status: 'ended',
         endedAt: serverTimestamp()
@@ -247,3 +248,4 @@ export const endChatSession = async (chatId, sessionId) => {
     throw new Error('Failed to end chat session');
   }
 };
+
