@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, User, Phone, Video, MessageSquare, X } from "lucide-react";
+import { ArrowLeft, Send, User, Phone, Video, MessageSquare, X, Mail } from "lucide-react";
 import { subscribeToMessages, sendMessage, endChatSession } from "../services/chatService";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -16,6 +16,7 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [clientNames, setClientNames] = useState({});
+  const [clientDetails, setClientDetails] = useState({});
   const messagesEndRef = useRef(null);
 
   // Auth listener
@@ -31,7 +32,27 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
     return () => unsubscribe();
   }, [setCurrentPage]);
 
-  // Function to fetch client name from users collection
+  // Function to fetch client details from consultation_requests
+  const fetchClientDetails = async (consultationRequestId) => {
+    try {
+      const consultationDoc = await getDoc(doc(db, 'consultation_requests', consultationRequestId));
+      if (consultationDoc.exists()) {
+        const consultationData = consultationDoc.data();
+        const clientInfo = {
+          name: consultationData.clientInfo?.name || consultationData.name || 'Unknown Client',
+          email: consultationData.clientInfo?.email || consultationData.email || '',
+          phone: consultationData.clientInfo?.phone || consultationData.phone || ''
+        };
+        return clientInfo;
+      }
+      return { name: 'Unknown Client', email: '', phone: '' };
+    } catch (error) {
+      console.error('Error fetching client details:', error);
+      return { name: 'Unknown Client', email: '', phone: '' };
+    }
+  };
+
+  // Function to fetch client name from users collection (fallback)
   const fetchClientName = async (clientId) => {
     try {
       const userDoc = await getDoc(doc(db, 'users', clientId));
@@ -63,6 +84,7 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
       
       const sessionsData = [];
       const newClientNames = {};
+      const newClientDetails = {};
 
       for (const docSnapshot of snapshot.docs) {
         const sessionData = {
@@ -74,8 +96,21 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
 
         sessionsData.push(sessionData);
 
-        // Fetch client name if not already cached
-        if (sessionData.clientId && !clientNames[sessionData.clientId]) {
+        // Fetch client details from consultation_requests if not already cached
+        if (sessionData.consultationRequestId && !clientDetails[sessionData.consultationRequestId]) {
+          try {
+            const clientInfo = await fetchClientDetails(sessionData.consultationRequestId);
+            newClientDetails[sessionData.consultationRequestId] = clientInfo;
+            newClientNames[sessionData.clientId] = clientInfo.name;
+          } catch (error) {
+            console.error('Error fetching client details for:', sessionData.consultationRequestId, error);
+            newClientDetails[sessionData.consultationRequestId] = { name: 'Unknown Client', email: '', phone: '' };
+            newClientNames[sessionData.clientId] = 'Unknown Client';
+          }
+        }
+
+        // Fallback to users collection if consultation request doesn't have client info
+        if (sessionData.clientId && !clientNames[sessionData.clientId] && !newClientNames[sessionData.clientId]) {
           try {
             const clientName = await fetchClientName(sessionData.clientId);
             newClientNames[sessionData.clientId] = clientName;
@@ -88,6 +123,7 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
 
       setChatSessions(sessionsData);
       setClientNames(prevNames => ({ ...prevNames, ...newClientNames }));
+      setClientDetails(prevDetails => ({ ...prevDetails, ...newClientDetails }));
       setLoading(false);
 
       console.log('Chat sessions updated:', sessionsData.length);
@@ -216,7 +252,17 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
   };
 
   const getClientName = (session) => {
+    if (session.consultationRequestId && clientDetails[session.consultationRequestId]) {
+      return clientDetails[session.consultationRequestId].name;
+    }
     return clientNames[session.clientId] || 'Loading...';
+  };
+
+  const getClientDetails = (session) => {
+    if (session.consultationRequestId && clientDetails[session.consultationRequestId]) {
+      return clientDetails[session.consultationRequestId];
+    }
+    return { name: clientNames[session.clientId] || 'Loading...', email: '', phone: '' };
   };
 
   if (loading) {
@@ -315,16 +361,30 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
             <div className="bg-white border-b border-gray-200 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="font-semibold text-gray-900">
-                      {getClientName(selectedChat)}
+                    <h2 className="font-semibold text-gray-900 text-lg">
+                      {getClientDetails(selectedChat).name}
                     </h2>
-                    <p className="text-sm text-gray-600">
-                      {selectedChat.status === 'active' ? 'Active Session' : 'Inactive'}
-                    </p>
+                    <div className="space-y-1">
+                      {getClientDetails(selectedChat).email && (
+                        <p className="text-sm text-gray-600 flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          {getClientDetails(selectedChat).email}
+                        </p>
+                      )}
+                      {getClientDetails(selectedChat).phone && (
+                        <p className="text-sm text-gray-600 flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          {getClientDetails(selectedChat).phone}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        {selectedChat.status === 'active' ? 'Active Session' : 'Inactive'} • Service: {selectedChat.serviceType || 'chat'}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

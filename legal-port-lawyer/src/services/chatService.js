@@ -203,6 +203,54 @@ export const sendMessage = async (chatId, senderId, messageText, senderType = 'u
       lastMessageTime: serverTimestamp()
     });
 
+    // Also store the message in the corresponding chat_session
+    try {
+      // Find the chat session by chatId (we need to query by consultationRequestId)
+      const chatDoc = await getDoc(doc(db, 'chats', chatId));
+      if (chatDoc.exists()) {
+        const chatData = chatDoc.data();
+        const consultationRequestId = chatData.consultationRequestId;
+        
+        if (consultationRequestId) {
+          // Find the chat session
+          const sessionQuery = query(
+            collection(db, 'chat_sessions'),
+            where('consultationRequestId', '==', consultationRequestId)
+          );
+          
+          const sessionSnapshot = await getDocs(sessionQuery);
+          if (!sessionSnapshot.empty) {
+            const sessionDoc = sessionSnapshot.docs[0];
+            const sessionRef = doc(db, 'chat_sessions', sessionDoc.id);
+            
+            // Get current messages array or initialize empty array
+            const currentSession = sessionDoc.data();
+            const currentMessages = currentSession.messages || [];
+            
+            // Add new message to the array
+            const newMessage = {
+              senderId,
+              messageText: messageText.trim(),
+              timestamp: new Date(),
+              type: senderType,
+              isRead: false
+            };
+            
+            // Update the chat session with the new message
+            await updateDoc(sessionRef, {
+              messages: [...currentMessages, newMessage],
+              lastActivity: serverTimestamp()
+            });
+            
+            console.log('Message also stored in chat_session');
+          }
+        }
+      }
+    } catch (sessionError) {
+      console.warn('Failed to store message in chat_session:', sessionError);
+      // Don't throw here as the main message was sent successfully
+    }
+
     console.log('Message sent successfully');
     return true;
   } catch (error) {
