@@ -44,13 +44,29 @@ export const subscribeToConsultationRequests = (lawyerId, callback) => {
   }
 };
 
-export const updateConsultationRequestStatus = async (requestId, status) => {
+export const updateConsultationRequestStatus = async (requestId, status, requestData = null) => {
   try {
     const requestRef = doc(db, 'consultation_requests', requestId);
     await updateDoc(requestRef, {
       status,
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      ...(status === 'accepted' && { acceptedAt: serverTimestamp() })
     });
+
+    // If status is accepted, create active session and chat
+    if (status === 'accepted' && requestData) {
+      const { createActiveSession } = await import('./chatService');
+      
+      const sessionData = await createActiveSession(
+        requestId,
+        requestData.clientId || requestData.userId,
+        requestData.lawyerId,
+        requestData.serviceType || 'chat'
+      );
+      
+      console.log('Active session and chat created:', sessionData);
+    }
+
     return true;
   } catch (error) {
     console.error('Error updating consultation request status:', error);

@@ -1,17 +1,25 @@
-
 import React from 'react';
 import { Clock, User, MessageSquare, Phone, Video, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { updateConsultationRequestStatus } from '../services/consultationService';
 
 const ConsultationRequestsList = ({ requests, onStatusUpdate }) => {
-  const handleStatusUpdate = async (requestId, newStatus) => {
+  const handleStatusUpdate = async (requestId, newStatus, requestData = null) => {
     try {
-      await updateConsultationRequestStatus(requestId, newStatus);
-      if (onStatusUpdate) {
-        onStatusUpdate();
+      await updateConsultationRequestStatus(requestId, newStatus, requestData);
+
+      // If accepted, navigate to chat after a short delay
+      if (newStatus === 'accepted') {
+        setTimeout(() => {
+          if (window.confirm('Request accepted! Would you like to start chatting with the client now?')) {
+            // You can pass the consultation request ID to find the corresponding chat
+            window.location.href = '#chat';
+          }
+        }, 1000);
       }
+
+      // The real-time listener will update the UI automatically
     } catch (error) {
-      console.error('Error updating request status:', error);
+      console.error('Error updating status:', error);
       alert('Failed to update request status');
     }
   };
@@ -106,7 +114,7 @@ const ConsultationRequestsList = ({ requests, onStatusUpdate }) => {
           {request.status === 'pending' && (
             <div className="flex gap-2">
               <button
-                onClick={() => handleStatusUpdate(request.id, 'accepted')}
+                onClick={() => handleStatusUpdate(request.id, 'accepted', request)}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" />
