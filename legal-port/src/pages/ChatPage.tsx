@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, User, Phone, Video, MessageSquare, X, Mail, Paperclip, Image, FileText } from "lucide-react";
+import { ArrowLeft, Send, User, Phone, Video, MessageSquare, X, Mail, Paperclip, Image, FileText, Circle } from "lucide-react";
 import { subscribeToMessages, sendMessage, sendMessageWithFile } from "../services/chatService";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { subscribeToMultipleOnlineStatus } from '../services/onlineStatusService';
+import { subscribeToUnreadCounts, markMessagesAsRead, getTotalUnreadCount } from '../services/notificationService';
 
 interface ChatPageProps {
   setCurrentPage: (page: string) => void;
@@ -22,6 +24,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
   const [sendingMessage, setSendingMessage] = useState(false);
   const [lawyerNames, setLawyerNames] = useState<{[key: string]: string}>({});
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [onlineStatuses, setOnlineStatuses] = useState<{[key: string]: any}>({});
+  const [unreadCounts, setUnreadCounts] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,6 +73,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
       
       const chatsData = [];
       const newLawyerNames: {[key: string]: string} = {};
+      const lawyerIds: string[] = [];
 
       for (const docSnapshot of snapshot.docs) {
         const chatData = {
@@ -81,14 +86,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
         chatsData.push(chatData);
 
         // Find the lawyer ID from participants
-        const lawyerId = chatData.participants.find((id: string) => id !== user.uid);
-        if (lawyerId && !lawyerNames[lawyerId] && !newLawyerNames[lawyerId]) {
-          try {
-            const lawyerName = await fetchLawyerName(lawyerId);
-            newLawyerNames[lawyerId] = lawyerName;
-          } catch (error) {
-            console.error('Error fetching lawyer name for:', lawyerId, error);
-            newLawyerNames[lawyerId] = 'Unknown Lawyer';
+        const lawyerId = chatData.participants?.find((id: string) => id !== user.uid);
+        if (lawyerId) {
+          lawyerIds.push(lawyerId);
+          if (!lawyerNames[lawyerId] && !newLawyerNames[lawyerId]) {
+            try {
+              const lawyerName = await fetchLawyerName(lawyerId);
+              newLawyerNames[lawyerId] = lawyerName;
+            } catch (error) {
+              console.error('Error fetching lawyer name for:', lawyerId, error);
+              newLawyerNames[lawyerId] = 'Unknown Lawyer';
+            }
           }
         }
       }
@@ -104,6 +112,28 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
     });
 
     return () => unsubscribe();
+  }, [user?.uid]);
+
+  // Subscribe to online statuses of lawyers
+  useEffect(() => {
+    if (!user?.uid || chats.length === 0) return;
+
+    const lawyerIds = chats.map(chat => 
+      chat.participants?.find((id: string) => id !== user.uid)
+    ).filter(Boolean);
+
+    if (lawyerIds.length === 0) return;
+
+    const unsubscribe = subscribeToMultipleOnlineStatus(lawyerIds, setOnlineStatuses);
+    return unsubscribe;
+  }, [user?.uid, chats]);
+
+  // Subscribe to unread message counts
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsubscribe = subscribeToUnreadCounts(user.uid, setUnreadCounts);
+    return unsubscribe;
   }, [user?.uid]);
 
   // Subscribe to messages of selected chat
@@ -130,6 +160,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
     setSelectedChat(chat);
     if (onChatSelect) {
       onChatSelect(chat.id);
+    }
+    
+    // Mark messages as read when chat is selected
+    if (user?.uid) {
+      markMessagesAsRead(chat.id, user.uid);
     }
   };
 
@@ -200,42 +235,108 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
   };
 
   const getLawyerName = (chat: any) => {
-    const lawyerId = chat.participants.find((id: string) => id !== user?.uid);
+    const lawyerId = chat.participants?.find((id: string) => id !== user?.uid);
     return lawyerNames[lawyerId] || 'Loading...';
+  };
+
+  const getLawyerId = (chat: any) => {
+    return chat.participants?.find((id: string) => id !== user?.uid);
+  };
+
+  const getUnreadCount = (chatId: string) => {
+    const unread = unreadCounts.find(u => u.chatId === chatId);
+    return unread?.count || 0;
+  };
+
+  const formatLastSeen = (lastSeen: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - lastSeen.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   };
 
   const renderMessageContent = (message: any) => {
     if (message.fileUrl) {
       if (message.fileType?.startsWith('image/')) {
         return (
-          <div>
-            <img 
-              src={message.fileUrl} 
-              alt="Shared image" 
-              className="max-w-xs rounded-lg cursor-pointer hover:opacity-90"
-              onClick={() => window.open(message.fileUrl, '_blank')}
-            />
+          <div className="space-y-2">
+            <div className="relative group">
+              <img 
+                src={message.fileUrl} 
+                alt="Shared file" 
+                className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.open(message.fileUrl, '_blank')}
+                onError={(e) => {
+                  console.error('Image failed to load:', message.fileUrl);
+                  e.currentTarget.style.display = 'none';
+                }}
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-200 flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 text-white text-sm bg-black bg-opacity-50 px-2 py-1 rounded">
+                  Click to view
+                </div>
+              </div>
+            </div>
             {message.messageText && (
-              <p className="text-sm mt-2">{message.messageText}</p>
+              <p className="text-sm">{message.messageText}</p>
             )}
           </div>
         );
       } else if (message.fileType === 'application/pdf') {
         return (
-          <div>
-            <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
-              <FileText className="w-5 h-5 text-red-600" />
-              <a 
-                href={message.fileUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                {message.fileName || 'Document.pdf'}
-              </a>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 p-3 bg-gray-100 rounded-lg border hover:bg-gray-200 transition-colors">
+              <FileText className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <a 
+                  href={message.fileUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline font-medium truncate block"
+                >
+                  {message.fileName || 'Document.pdf'}
+                </a>
+                <div className="text-xs text-gray-500">
+                  {message.fileSize ? `${(message.fileSize / 1024 / 1024).toFixed(2)} MB` : 'PDF Document'}
+                </div>
+              </div>
             </div>
             {message.messageText && (
-              <p className="text-sm mt-2">{message.messageText}</p>
+              <p className="text-sm">{message.messageText}</p>
+            )}
+          </div>
+        );
+      } else {
+        // Generic file type
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 p-3 bg-gray-100 rounded-lg border hover:bg-gray-200 transition-colors">
+              <Paperclip className="w-5 h-5 text-gray-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <a 
+                  href={message.fileUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline font-medium truncate block"
+                >
+                  {message.fileName || 'Unknown file'}
+                </a>
+                <div className="text-xs text-gray-500">
+                  {message.fileSize ? `${(message.fileSize / 1024 / 1024).toFixed(2)} MB` : 'File'}
+                </div>
+              </div>
+            </div>
+            {message.messageText && (
+              <p className="text-sm">{message.messageText}</p>
             )}
           </div>
         );
@@ -295,12 +396,40 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-white" />
+                      <div className="relative">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-white" />
+                        </div>
+                        {/* Online status indicator */}
+                        {(() => {
+                          const lawyerId = getLawyerId(chat);
+                          const status = onlineStatuses[lawyerId];
+                          return (
+                            <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                              status?.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                            }`}></div>
+                          );
+                        })()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 truncate">
-                          {getLawyerName(chat)}
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-gray-900 truncate">
+                            {getLawyerName(chat)}
+                          </div>
+                          {(() => {
+                            const lawyerId = getLawyerId(chat);
+                            const status = onlineStatuses[lawyerId];
+                            return status?.isOnline ? (
+                              <span className="text-xs text-green-600 flex items-center gap-1">
+                                <Circle className="w-2 h-2 fill-current" />
+                                Online
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-500">
+                                {status ? formatLastSeen(status.lastSeen) : 'Offline'}
+                              </span>
+                            );
+                          })()}
                         </div>
                         <div className="text-xs text-gray-500 truncate">
                           {chat.lastMessage || 'No messages yet'}
@@ -311,7 +440,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
                       <div className="text-xs text-gray-500">
                         {formatTime(chat.lastMessageTime)}
                       </div>
-                      <div className="w-2 h-2 bg-green-500 rounded-full mt-1 ml-auto"></div>
+                      {getUnreadCount(chat.id) > 0 && (
+                        <div className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center mt-1 ml-auto animate-pulse">
+                          {getUnreadCount(chat.id)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -329,16 +462,42 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
             <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-white" />
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                    {(() => {
+                      const lawyerId = getLawyerId(selectedChat);
+                      const status = onlineStatuses[lawyerId];
+                      return (
+                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                          status?.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                        }`}></div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <h2 className="font-semibold text-gray-900 text-lg">
                       {getLawyerName(selectedChat)}
                     </h2>
-                    <p className="text-xs text-gray-500">
-                      {selectedChat.status === 'active' ? 'Active Chat' : 'Inactive'}
-                    </p>
+                    {(() => {
+                      const lawyerId = getLawyerId(selectedChat);
+                      const status = onlineStatuses[lawyerId];
+                      return (
+                        <p className="text-sm">
+                          {status?.isOnline ? (
+                            <span className="text-green-600 flex items-center gap-1">
+                              <Circle className="w-2 h-2 fill-current" />
+                              Online now
+                            </span>
+                          ) : (
+                            <span className="text-gray-500">
+                              {status ? `Last seen ${formatLastSeen(status.lastSeen)}` : 'Offline'}
+                            </span>
+                          )}
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

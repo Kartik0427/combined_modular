@@ -95,10 +95,13 @@ export const sendMessageWithFile = async (
     
     // Upload file to Firebase Storage
     const storage = getStorage();
-    const fileRef = ref(storage, `chat-files/${chatId}/${Date.now()}_${file.name}`);
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const fileRef = ref(storage, `chat-files/${chatId}/${Date.now()}_${sanitizedFileName}`);
     
     const uploadResult = await uploadBytes(fileRef, file);
     const fileUrl = await getDownloadURL(uploadResult.ref);
+    
+    console.log('File uploaded successfully:', fileUrl);
     
     // Add message with file to subcollection
     const messageData = {
@@ -116,7 +119,6 @@ export const sendMessageWithFile = async (
     await addDoc(collection(db, 'chats', chatId, 'messages'), messageData);
 
     // Update chat's last message info
-    const chatRef = doc(db, 'chats', chatId);
     const lastMessageText = messageText.trim() || `📎 ${file.name}`;
     await updateDoc(chatRef, {
       lastMessage: lastMessageText,

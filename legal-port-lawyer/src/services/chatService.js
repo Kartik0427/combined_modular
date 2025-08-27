@@ -14,6 +14,7 @@ import {
   serverTimestamp,
   getDocs 
 } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Create chat session when consultation is accepted
 export const createActiveSession = async (consultationRequestId, clientId, lawyerId, serviceType) => {
@@ -293,6 +294,59 @@ export const subscribeToUserChats = (userId, callback) => {
     console.error('Error setting up chats listener:', error);
     callback([]);
     return () => {};
+  }
+};
+
+// Send a message with file attachment
+export const sendMessageWithFile = async (
+  chatId, 
+  senderId, 
+  file, 
+  senderType = 'user',
+  messageText = ''
+) => {
+  try {
+    console.log('Sending message with file:', { chatId, senderId, fileName: file.name });
+    
+    // Upload file to Firebase Storage
+    const storage = getStorage();
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const fileRef = ref(storage, `chat-files/${chatId}/${Date.now()}_${sanitizedFileName}`);
+    
+    const uploadResult = await uploadBytes(fileRef, file);
+    const fileUrl = await getDownloadURL(uploadResult.ref);
+    
+    console.log('File uploaded successfully:', fileUrl);
+    
+    // Add message with file to subcollection
+    const messageData = {
+      senderId,
+      messageText: messageText.trim(),
+      timestamp: serverTimestamp(),
+      type: senderType,
+      isRead: false,
+      fileUrl,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size
+    };
+
+    await addDoc(collection(db, 'chats', chatId, 'messages'), messageData);
+
+    // Update chat's last message info
+    const chatRef = doc(db, 'chats', chatId);
+    const lastMessageText = messageText.trim() || `📎 ${file.name}`;
+    await updateDoc(chatRef, {
+      lastMessage: lastMessageText,
+      lastMessageSender: senderId,
+      lastMessageTime: serverTimestamp()
+    });
+
+    console.log('Message with file sent successfully');
+    return true;
+  } catch (error) {
+    console.error('Error sending message with file:', error);
+    throw new Error('Failed to send message with file');
   }
 };
 

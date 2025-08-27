@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scale, MessageSquare } from 'lucide-react'; // Import MessageSquare icon
 import { User } from 'firebase/auth';
 import UserMenu from './UserMenu'; // Assuming UserMenu component exists
+import { subscribeToUnreadCounts, getTotalUnreadCount } from '../services/notificationService';
+import { updateOnlineStatus } from '../services/onlineStatusService';
 
 interface HeaderProps {
   user: User | null;
@@ -11,6 +13,38 @@ interface HeaderProps {
 }
 
 const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Subscribe to unread messages
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsubscribe = subscribeToUnreadCounts(user.uid, (unreadCounts) => {
+      setUnreadCount(getTotalUnreadCount(unreadCounts));
+    });
+
+    return unsubscribe;
+  }, [user?.uid]);
+
+  // Update online status when user logs in/out
+  useEffect(() => {
+    if (user?.uid) {
+      updateOnlineStatus(user.uid, true);
+      
+      // Set user offline when they leave/close the page
+      const handleBeforeUnload = () => {
+        updateOnlineStatus(user.uid, false);
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        updateOnlineStatus(user.uid, false);
+      };
+    }
+  }, [user?.uid]);
+
   return (
     <header className="bg-dark-blue text-white sticky top-0 z-50">
       <div className="container mx-auto px-4 flex items-center justify-between h-20">
@@ -41,10 +75,17 @@ const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
           {user && onChatClick && (
             <button
               onClick={onChatClick}
-              className="flex items-center gap-2 text-white hover:text-gold transition-colors"
+              className="relative flex items-center gap-2 text-white hover:text-gold transition-colors"
               title="My Chats"
             >
-              <MessageSquare className="w-5 h-5" />
+              <div className="relative">
+                <MessageSquare className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] animate-pulse">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
               <span className="hidden md:inline">Chats</span>
             </button>
           )}
