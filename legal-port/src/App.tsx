@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import './App.css';
 import Header from "./components/Header";
@@ -11,6 +10,7 @@ import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 import Catalogue from "./components/Catalogue";
+import ChatPage from './pages/ChatPage'; // Import ChatPage
 import { useAuth } from "./context/AuthContext";
 import { auth } from "./lib/firebase";
 import { signOut } from "firebase/auth";
@@ -30,7 +30,7 @@ const Home = ({ onAuthClick }: { onAuthClick: () => void }) => (
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -38,13 +38,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  
+
   return user ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { user } = useAuth();
+  const [currentPage, setCurrentPage] = useState('home'); // State to manage current page
 
   const handleAuthSuccess = () => {
     setIsAuthModalOpen(false);
@@ -61,33 +62,48 @@ export default function App() {
     }
   };
 
+  // Placeholder for consultation request handler
+  const handleConsultationRequest = (lawyer: any, serviceType: string) => {
+    console.log("Consultation requested for:", lawyer, "Service:", serviceType);
+    // Logic to open consultation modal would go here
+  };
+
   return (
     <Router>
       <div className="app-container bg-gray-50">
-        <Header
-          user={user}
-          onAuthClick={() => setIsAuthModalOpen(true)}
-          onSignOut={handleSignOut}
-        />
-        <main>
-          <Routes>
-            <Route 
-              path="/" 
-              element={<Home onAuthClick={() => setIsAuthModalOpen(true)} />} 
+        {currentPage === 'chat' ? (
+          <ChatPage 
+            setCurrentPage={setCurrentPage}
+          />
+        ) : (
+          <>
+            <Header
+              user={user}
+              onAuthClick={() => setIsAuthModalOpen(true)}
+              onSignOut={handleSignOut}
+              onChatClick={() => setCurrentPage('chat')} // Navigate to chat
             />
-            <Route 
-              path="/catalogue" 
-              element={<Catalogue />} 
+            <main>
+              <Routes>
+                <Route
+                  path="/"
+                  element={<Home onAuthClick={() => setIsAuthModalOpen(true)} />}
+                />
+                <Route
+                  path="/catalogue"
+                  element={<Catalogue />}
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+            <Footer />
+            <AuthModal
+              isOpen={isAuthModalOpen}
+              onClose={() => setIsAuthModalOpen(false)}
+              onAuthSuccess={handleAuthSuccess}
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-        <Footer />
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          onAuthSuccess={handleAuthSuccess}
-        />
+          </>
+        )}
       </div>
     </Router>
   );

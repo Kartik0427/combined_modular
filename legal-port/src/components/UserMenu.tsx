@@ -7,15 +7,16 @@ import {
     DropdownMenuTrigger,
   } from "./ui/dropdown-menu";
   import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-  import { LogOut, Settings, User as UserIcon } from "lucide-react";
+  import { User as UserIcon, Settings, LogOut, MessageSquare } from "lucide-react";
   import { User } from "firebase/auth";
 
   interface UserMenuProps {
     user: User | null;
     onSignOut: () => void;
+    onChatClick?: () => void;
   }
 
-  export default function UserMenu({ user, onSignOut }: UserMenuProps) {
+  export default function UserMenu({ user, onSignOut, onChatClick }: UserMenuProps) {
     const getInitials = (name: string | null | undefined) => {
       if (!name) return "U";
       return name.split(" ").map((n) => n[0]).join("").toUpperCase();
@@ -41,6 +42,12 @@ import {
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
+          {onChatClick && (
+            <DropdownMenuItem onClick={onChatClick}>
+              <MessageSquare className="mr-2 h-4 w-4" />
+              <span>My Chats</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>

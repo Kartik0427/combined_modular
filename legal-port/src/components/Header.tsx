@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scale } from 'lucide-react';
+import { Scale, MessageSquare } from 'lucide-react'; // Import MessageSquare icon
 import { User } from 'firebase/auth';
 import UserMenu from './UserMenu'; // Assuming UserMenu component exists
 
@@ -7,9 +7,10 @@ interface HeaderProps {
   user: User | null;
   onAuthClick: () => void;
   onSignOut: () => void;
+  onChatClick?: () => void; // Add onChatClick prop
 }
 
-const Header = ({ user, onAuthClick, onSignOut }: HeaderProps) => {
+const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
   return (
     <header className="bg-dark-blue text-white sticky top-0 z-50">
       <div className="container mx-auto px-4 flex items-center justify-between h-20">
@@ -37,6 +38,16 @@ const Header = ({ user, onAuthClick, onSignOut }: HeaderProps) => {
           <div className="bg-wallet-green text-wallet-green-text font-semibold px-4 py-2 rounded-lg text-sm">
             ₹2500
           </div>
+          {user && onChatClick && (
+            <button
+              onClick={onChatClick}
+              className="flex items-center gap-2 text-dark-blue hover:text-gold transition-colors"
+              title="My Chats"
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="hidden md:inline">Chats</span>
+            </button>
+          )}
           {user ? (
             <UserMenu user={user} onSignOut={onSignOut} />
           ) : (
