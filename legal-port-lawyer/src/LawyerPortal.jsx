@@ -128,7 +128,8 @@ const LawyerPortal = ({ onLogout }) => {
             completed: 0,
             declined: 0
           });
-          setUser({
+          setUser(prevUser => ({
+            ...prevUser,
             name: "Loading...",
             specialization: "Loading...",
             experience: "0 Years",
@@ -137,7 +138,7 @@ const LawyerPortal = ({ onLogout }) => {
             phone: "",
             email: "",
             uid: null
-          });
+          }));
           setBalance(0);
         }
       } catch (error) {
