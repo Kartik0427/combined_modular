@@ -120,6 +120,7 @@ export const sendMessageWithFile = async (
 
     // Update chat's last message info
     const lastMessageText = messageText.trim() || `📎 ${file.name}`;
+    const chatRef = doc(db, 'chats', chatId);
     await updateDoc(chatRef, {
       lastMessage: lastMessageText,
       lastMessageSender: senderId,
