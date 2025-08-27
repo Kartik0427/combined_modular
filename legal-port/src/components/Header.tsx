@@ -41,11 +41,11 @@ const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
           {user && onChatClick && (
             <button
               onClick={onChatClick}
-              className="flex items-center gap-2 text-dark-blue hover:text-gold transition-colors"
+              className="flex items-center gap-2 text-white hover:text-gold transition-colors"
               title="My Chats"
             >
               <MessageSquare className="w-5 h-5" />
-              <span className="md:inline">Chats</span>
+              <span className="hidden md:inline">Chats</span>
             </button>
           )}
           {user ? (

@@ -277,10 +277,10 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar - Chat Sessions List */}
-      <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
+      <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col h-full">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-4 mb-4">
             <button
               onClick={() => setCurrentPage("dashboard")}
@@ -295,7 +295,7 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {chatSessions.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
               <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -354,11 +354,11 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-full">
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="bg-white border-b border-gray-200 p-4">
+            <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center">
@@ -400,7 +400,7 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 min-h-0">
               {!selectedChat.chatId ? (
                 <div className="text-center text-gray-500 py-8">
                   <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -450,7 +450,7 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
             </div>
 
             {/* Message Input */}
-            <div className="bg-white border-t border-gray-200 p-4">
+            <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <input
                   type="text"
