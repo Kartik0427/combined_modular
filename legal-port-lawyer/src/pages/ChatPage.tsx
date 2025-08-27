@@ -328,12 +328,6 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-gray-100 rounded-full" title="Voice Call">
-                    <Phone className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-full" title="Video Call">
-                    <Video className="w-5 h-5 text-gray-600" />
-                  </button>
                   <button 
                     onClick={handleEndChat}
                     className="p-2 hover:bg-red-100 rounded-full" 
