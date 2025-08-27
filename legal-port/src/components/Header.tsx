@@ -45,7 +45,7 @@ const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
               title="My Chats"
             >
               <MessageSquare className="w-5 h-5" />
-              <span className="hidden md:inline">Chats</span>
+              <span className="md:inline">Chats</span>
             </button>
           )}
           {user ? (
