@@ -460,11 +460,6 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
                         <div className="text-xs text-gray-500">
                           {formatTime(session.lastActivity)}
                         </div>
-                        {correspondingChat && getUnreadCount(correspondingChat.id) > 0 && (
-                          <div className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center mt-1 ml-auto animate-pulse">
-                            {getUnreadCount(correspondingChat.id)}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
