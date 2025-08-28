@@ -61,15 +61,23 @@ service cloud.firestore {
           request.auth.uid == request.resource.data.senderId &&
           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
         allow update: if request.auth != null && 
-          request.auth.uid == resource.data.senderId;
+          (request.auth.uid == resource.data.senderId ||
+           (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])));
       }
     }
 
     // Messages collection (standalone)
     match /messages/{messageId} {
-      allow read, write: if request.auth != null && 
+      allow read: if request.auth != null && 
         (request.auth.uid == resource.data.senderId || 
          request.auth.uid == resource.data.receiverId);
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.senderId;
+      allow update: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId || 
+         (request.auth.uid == resource.data.receiverId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])));
     }
 
     // Legacy support for sessions
