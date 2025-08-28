@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import Modal from "./components/Modal";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { subscribeToConsultationRequests, getRequestStats } from "./services/consultationService";
+import { updateOnlineStatus } from "./services/onlineStatusService";
 
 // Import all the page components
 import Dashboard from "./pages/Dashboard";
@@ -51,13 +51,13 @@ const LawyerPortal = ({ onLogout }) => {
       console.log('Fetching lawyer profile for UID:', uid);
       const lawyerRef = doc(db, 'lawyer_profiles', uid);
       const lawyerDoc = await getDoc(lawyerRef);
-      
+
       if (lawyerDoc.exists()) {
         const data = lawyerDoc.data();
         console.log('Lawyer profile data:', data);
-        
+
         setLawyerProfile(data);
-        
+
         // Update user state with fetched data
         setUser(prev => ({
           ...prev,
@@ -104,12 +104,15 @@ const LawyerPortal = ({ onLogout }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log('Auth state changed:', firebaseUser);
       setAuthUser(firebaseUser);
-      
+
       try {
         if (firebaseUser) {
+          // Update online status when lawyer logs in
+          updateOnlineStatus(firebaseUser.uid, true);
+
           // Fetch lawyer profile data
           await fetchLawyerProfile(firebaseUser.uid);
-          
+
           // Set up consultation requests subscription
           console.log('Setting up consultation requests subscription for:', firebaseUser.uid);
           requestsUnsubscribe = subscribeToConsultationRequests(firebaseUser.uid, (requests) => {
@@ -149,21 +152,43 @@ const LawyerPortal = ({ onLogout }) => {
       }
     });
 
+    // Set lawyer offline when they leave/close the page
+    const handleBeforeUnload = () => {
+      if (authUser?.uid) {
+        updateOnlineStatus(authUser.uid, false);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (authUser?.uid) {
+        updateOnlineStatus(authUser.uid, false);
+      }
       if (requestsUnsubscribe) {
         requestsUnsubscribe();
       }
     };
-  }, []);
+  }, [authUser?.uid]);
 
   const handleLogout = () => {
     setShowLogoutModal(true);
   };
 
-  const confirmLogout = () => {
-    setShowLogoutModal(false);
-    onLogout();
+  const confirmLogout = async () => {
+    try {
+      // Set lawyer offline before signing out
+      if (authUser?.uid) {
+        await updateOnlineStatus(authUser.uid, false);
+      }
+      await signOut(auth);
+      setShowLogoutModal(false);
+      onLogout(); // Navigate back to main page
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const cancelLogout = () => {
@@ -172,10 +197,10 @@ const LawyerPortal = ({ onLogout }) => {
 
   // This function determines which page component to render
   const renderPage = () => {
-    const pageProps = { 
-      user, 
-      balance, 
-      setCurrentPage, 
+    const pageProps = {
+      user,
+      balance,
+      setCurrentPage,
       handleLogout,
       lawyerProfile,
       consultationRequests,
@@ -220,7 +245,7 @@ const LawyerPortal = ({ onLogout }) => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center bg-white p-8 rounded-lg shadow-lg">
           <div className="text-lg text-gray-700 mb-4">Please log in to access the lawyer portal.</div>
-          <button 
+          <button
             onClick={onLogout}
             className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
