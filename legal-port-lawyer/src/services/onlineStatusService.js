@@ -39,33 +39,59 @@ export const subscribeToMultipleOnlineStatus = (userIds, callback) => {
     return () => {};
   }
 
-  // Query users collection for client online status
-  const q = query(
-    collection(db, 'users'),
-    where('__name__', 'in', userIds)
-  );
+  // Split userIds into chunks of 10 (Firestore limit for 'in' queries)
+  const chunks = [];
+  for (let i = 0; i < userIds.length; i += 10) {
+    chunks.push(userIds.slice(i, i + 10));
+  }
 
-  return onSnapshot(q, (snapshot) => {
-    const statuses = {};
-    
-    snapshot.docs.forEach(doc => {
-      const data = doc.data();
-      statuses[doc.id] = {
-        isOnline: data.isOnline || false,
-        lastSeen: data.lastSeen?.toDate() || new Date()
-      };
-    });
+  const statuses = {};
+  let completedChunks = 0;
 
-    // Fill in missing users as offline
-    userIds.forEach(userId => {
-      if (!statuses[userId]) {
-        statuses[userId] = { isOnline: false, lastSeen: new Date() };
+  const unsubscribers = chunks.map(chunk => {
+    // Query users collection for client online status
+    const q = query(
+      collection(db, 'users'),
+      where('__name__', 'in', chunk)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        statuses[doc.id] = {
+          isOnline: data.isOnline || false,
+          lastSeen: data.lastSeen?.toDate() || new Date()
+        };
+      });
+
+      // Fill in missing users from this chunk as offline
+      chunk.forEach(userId => {
+        if (!statuses[userId]) {
+          statuses[userId] = { isOnline: false, lastSeen: new Date() };
+        }
+      });
+
+      completedChunks++;
+      if (completedChunks === chunks.length) {
+        callback(statuses);
+      }
+    }, (error) => {
+      console.error('Error in online status subscription:', error);
+      // Fill missing users as offline on error
+      chunk.forEach(userId => {
+        if (!statuses[userId]) {
+          statuses[userId] = { isOnline: false, lastSeen: new Date() };
+        }
+      });
+      completedChunks++;
+      if (completedChunks === chunks.length) {
+        callback(statuses);
       }
     });
-
-    callback(statuses);
-  }, (error) => {
-    console.error('Error in online status subscription:', error);
-    callback({});
   });
+
+  // Return a function that unsubscribes all listeners
+  return () => {
+    unsubscribers.forEach(unsubscribe => unsubscribe());
+  };
 };
