@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, User, Phone, Video, MessageSquare, X, Mail, Paperclip, Image, FileText, Circle } from "lucide-react";
-import { subscribeToMessages, sendMessage, sendMessageWithFile } from "../services/chatService";
+import { subscribeToMessages, sendMessage, sendMessageWithFile, endChatSession } from "../services/chatService";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
@@ -224,6 +224,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleEndChat = async () => {
+    if (!selectedChat?.id) return;
+    
+    if (window.confirm('Are you sure you want to end this chat session? This action cannot be undone.')) {
+      try {
+        await endChatSession(selectedChat.id);
+        setSelectedChat(null);
+        alert('Chat session ended successfully.');
+      } catch (error) {
+        console.error('Error ending chat:', error);
+        alert('Failed to end chat session. Please try again.');
+      }
     }
   };
 
@@ -498,6 +513,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
                       );
                     })()}
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={handleEndChat}
+                    className="p-2 hover:bg-red-100 rounded-full transition-colors" 
+                    title="End Chat Session"
+                  >
+                    <X className="w-5 h-5 text-red-600" />
+                  </button>
                 </div>
               </div>
             </div>
