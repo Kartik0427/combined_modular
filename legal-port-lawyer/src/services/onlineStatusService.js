@@ -39,6 +39,7 @@ export const subscribeToMultipleOnlineStatus = (userIds, callback) => {
     return () => {};
   }
 
+  // Query users collection for client online status
   const q = query(
     collection(db, 'users'),
     where('__name__', 'in', userIds)
@@ -63,5 +64,8 @@ export const subscribeToMultipleOnlineStatus = (userIds, callback) => {
     });
 
     callback(statuses);
+  }, (error) => {
+    console.error('Error in online status subscription:', error);
+    callback({});
   });
 };

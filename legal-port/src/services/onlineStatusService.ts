@@ -6,7 +6,7 @@ export interface OnlineStatus {
   lastSeen: Date;
 }
 
-// Update user's online status
+// Update user's online status (for lawyers)
 export const updateOnlineStatus = async (userId: string, isOnline: boolean) => {
   try {
     const userRef = doc(db, 'users', userId);
@@ -16,6 +16,19 @@ export const updateOnlineStatus = async (userId: string, isOnline: boolean) => {
     });
   } catch (error) {
     console.error('Error updating online status:', error);
+  }
+};
+
+// Update user's online status (for clients)
+export const updateUserOnlineStatus = async (userId: string, isOnline: boolean) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      isOnline,
+      lastSeen: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating user online status:', error);
   }
 };
 

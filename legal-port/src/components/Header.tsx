@@ -3,7 +3,7 @@ import { Scale, MessageSquare } from 'lucide-react'; // Import MessageSquare ico
 import { User } from 'firebase/auth';
 import UserMenu from './UserMenu'; // Assuming UserMenu component exists
 import { subscribeToUnreadCounts, getTotalUnreadCount } from '../services/notificationService';
-import { updateOnlineStatus } from '../services/onlineStatusService';
+import { updateOnlineStatus, updateUserOnlineStatus } from '../services/onlineStatusService';
 
 interface HeaderProps {
   user: User | null;
@@ -29,18 +29,19 @@ const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
   // Update online status when user logs in/out
   useEffect(() => {
     if (user?.uid) {
-      updateOnlineStatus(user.uid, true);
+      // Update online status in users collection for clients
+      updateUserOnlineStatus(user.uid, true);
       
       // Set user offline when they leave/close the page
       const handleBeforeUnload = () => {
-        updateOnlineStatus(user.uid, false);
+        updateUserOnlineStatus(user.uid, false);
       };
 
       window.addEventListener('beforeunload', handleBeforeUnload);
       
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
-        updateOnlineStatus(user.uid, false);
+        updateUserOnlineStatus(user.uid, false);
       };
     }
   }, [user?.uid]);

@@ -165,6 +165,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ setCurrentPage, selectedChatId = nu
     // Mark messages as read when chat is selected
     if (user?.uid) {
       markMessagesAsRead(chat.id, user.uid);
+      // Force update unread counts to reflect the change immediately
+      setUnreadCounts(prevCounts => 
+        prevCounts.filter(count => count.chatId !== chat.id)
+      );
     }
   };
 

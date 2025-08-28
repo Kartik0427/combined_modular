@@ -54,7 +54,11 @@ const ChatPage = ({ setCurrentPage, selectedChatId = null, onChatSelect = null }
     
     if (clientIds.length === 0) return;
 
-    const unsubscribe = subscribeToMultipleOnlineStatus(clientIds, setOnlineStatuses);
+    console.log('Subscribing to client online status for:', clientIds);
+    const unsubscribe = subscribeToMultipleOnlineStatus(clientIds, (statuses) => {
+      console.log('Client online statuses updated:', statuses);
+      setOnlineStatuses(statuses);
+    });
     return unsubscribe;
   }, [user?.uid, chatSessions]);
 
