@@ -2,7 +2,7 @@ import React from 'react';
 import { Clock, User, MessageSquare, Phone, Video, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { updateConsultationRequestStatus } from '../services/consultationService';
 
-const ConsultationRequestsList = ({ requests, onStatusUpdate }) => {
+const ConsultationRequestsList = ({ requests, onStatusUpdate, onStartSession }) => {
   const handleStatusUpdate = async (requestId, newStatus, requestData = null) => {
     try {
       console.log('Handling status update:', { requestId, newStatus, requestData });
@@ -142,13 +142,22 @@ const ConsultationRequestsList = ({ requests, onStatusUpdate }) => {
           )}
 
           {request.status === 'accepted' && (
-            <button
-              onClick={() => handleStatusUpdate(request.id, 'completed')}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
-            >
-              <CheckCircle className="w-4 h-4" />
-              Mark as Completed
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onStartSession && onStartSession(request)}
+                className="flex-1 bg-gradient-to-r from-[#9A8C98] to-[#C9ADA7] text-white py-2 px-4 rounded-lg text-sm font-medium hover:from-[#C9ADA7] hover:to-[#F2E9E4] hover:text-[#22223B] transition-all flex items-center justify-center gap-2"
+              >
+                <Video className="w-4 h-4" />
+                Start Session
+              </button>
+              <button
+                onClick={() => handleStatusUpdate(request.id, 'completed')}
+                className="px-6 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Complete
+              </button>
+            </div>
           )}
         </div>
       ))}

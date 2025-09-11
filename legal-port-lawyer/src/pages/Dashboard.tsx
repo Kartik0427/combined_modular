@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, DollarSign, MessageSquare, Mail, Star, LogOut, RefreshCw, Scale, BarChart3, Settings, Inbox } from 'lucide-react';
+import { User, DollarSign, MessageSquare, Mail, Star, LogOut, RefreshCw, Scale, BarChart3, Settings, Inbox, Video } from 'lucide-react';
 import { subscribeToConsultationRequests, getRequestStats } from '../services/consultationService';
 import ConsultationRequestsList from '../components/ConsultationRequestsList';
 
@@ -113,6 +113,12 @@ const Dashboard = ({ user, balance, setCurrentPage, handleLogout, consultationRe
               <MessageSquare className="w-6 h-6" />
             </div>
             <span className="text-white font-medium text-sm text-center">Chat</span>
+          </button>
+          <button onClick={() => setCurrentPage('videocall')} className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-6 shadow-2xl hover:bg-white/20 transition-all duration-300 flex flex-col items-center gap-3 group">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] text-white flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Video className="w-6 h-6" />
+            </div>
+            <span className="text-white font-medium text-sm text-center">Video Calls</span>
           </button>
           <button onClick={() => setCurrentPage('contact')} className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-6 shadow-2xl hover:bg-white/20 transition-all duration-300 flex flex-col items-center gap-3 group">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#9A8C98] to-[#C9ADA7] text-white flex items-center justify-center group-hover:scale-110 transition-transform">

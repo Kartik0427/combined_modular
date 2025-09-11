@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Agora Test</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.2.js"></script>
+</head>
+<body>
+    <h1>Minimal Agora Connection Test</h1>
+    <button onclick="testAgoraJoin()">Test Agora Join</button>
+    <div id="logs"></div>
+
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('logs').innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+        }
+
+        async function testAgoraJoin() {
+            const appId = 'b439f7daedb7488a824f846c1a4952c5';  // ensure correct string
+            const channel = 'kartik';
+            const uid = 0;
+            const token = '007eJxTYHh/wKZbOTlxfu/l2nfzn+0VO/xYagWb3FWTn/vVrwlUnZ6owJBkYmyZZp6SmJqSZG5iYZFoYWSSZmFilmyYaGJpapRsGq9yOKMhkJEh9IUIIyMDBIL4bAzZiUUlmdkMDAAe9yGW';
+
+            log('Test App ID: ' + appId);
+            log('Test Channel: ' + channel);
+            log('Test UID: ' + uid);
+            log('Test Token: ' + token.substring(0, 20) + '...');
+
+            const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+            
+            try {
+                log('Attempting to join channel...');
+                await client.join(appId, channel, token, uid);
+                log('✅ Joined successfully!');
+                
+                // Leave after 3 seconds
+                setTimeout(async () => {
+                    await client.leave();
+                    log('Left channel');
+                }, 3000);
+                
+            } catch (err) {
+                log('❌ Join failed: ' + err.message);
+                log('Error code: ' + err.code);
+                log('Full error: ' + JSON.stringify(err));
+            }
+        }
+    </script>
+</body>
+</html>

@@ -4,7 +4,7 @@ import { subscribeToConsultationRequests, updateConsultationRequestStatus, getRe
 import ConsultationRequestCard from '../components/ConsultationRequestCard';
 import ConsultationRequestsList from '../components/ConsultationRequestsList';
 
-const RequestsPage = ({ user, setCurrentPage }) => {
+const RequestsPage = ({ user, setCurrentPage, onStartSession }) => {
   const [requests, setRequests] = useState([]);
   const [requestStats, setRequestStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -88,7 +88,11 @@ const RequestsPage = ({ user, setCurrentPage }) => {
               <p className="text-white/70">New consultation requests will appear here.</p>
             </div>
           ) : (
-            <ConsultationRequestsList requests={requests} />
+            <ConsultationRequestsList 
+              requests={requests} 
+              onStatusUpdate={handleRequestAction}
+              onStartSession={onStartSession}
+            />
           )}
         </div>
       </div>

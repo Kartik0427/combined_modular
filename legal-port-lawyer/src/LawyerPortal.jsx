@@ -16,6 +16,7 @@ import ChatPage from "./pages/ChatPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
 import RequestsPage from "./pages/RequestsPage";
+import VideoCallPage from "./pages/VideoCallPage";
 
 const LawyerPortal = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState("dashboard");
@@ -196,6 +197,13 @@ const LawyerPortal = ({ onLogout }) => {
   };
 
   // This function determines which page component to render
+  const handleStartSession = (request) => {
+    // Navigate to video call page and pass the client ID
+    setCurrentPage('videocall');
+    // You can store the request data in state or pass it through URL params if needed
+    console.log('Starting session for request:', request);
+  };
+
   const renderPage = () => {
     const pageProps = {
       user,
@@ -204,7 +212,8 @@ const LawyerPortal = ({ onLogout }) => {
       handleLogout,
       lawyerProfile,
       consultationRequests,
-      requestStats
+      requestStats,
+      onStartSession: handleStartSession
     };
 
     switch (currentPage) {
@@ -220,6 +229,8 @@ const LawyerPortal = ({ onLogout }) => {
         return <ReviewsPage {...pageProps} />;
       case "chat":
         return <ChatPage {...pageProps} />;
+      case "videocall":
+        return <VideoCallPage {...pageProps} />;
       case "settings":
         return <SettingsPage setCurrentPage={setCurrentPage} user={user} />;
       case "requests":

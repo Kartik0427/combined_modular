@@ -11,6 +11,7 @@ import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 import Catalogue from "./components/Catalogue";
 import ChatPage from './pages/ChatPage'; // Import ChatPage
+import VideoCallPage from './pages/VideoCallPage'; // Import VideoCallPage
 import { useAuth } from "./context/AuthContext";
 import { auth } from "./lib/firebase";
 import { signOut } from "firebase/auth";
@@ -75,6 +76,10 @@ export default function App() {
           <ChatPage 
             setCurrentPage={setCurrentPage}
           />
+        ) : currentPage === 'videocall' ? (
+          <ProtectedRoute>
+            <VideoCallPage />
+          </ProtectedRoute>
         ) : (
           <>
             <Header
@@ -82,6 +87,7 @@ export default function App() {
               onAuthClick={() => setIsAuthModalOpen(true)}
               onSignOut={handleSignOut}
               onChatClick={() => setCurrentPage('chat')} // Navigate to chat
+              onVideoCallClick={() => setCurrentPage('videocall')} // Navigate to video call
             />
             <main>
               <Routes>

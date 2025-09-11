@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agora Connection Test</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.2.js"></script>
+</head>
+<body>
+    <h1>Agora Connection Test</h1>
+    <div id="status">Testing connection...</div>
+    <div id="logs"></div>
+
+    <script>
+        const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+        const appId = 'b439f7daedb7488a824f846c1a4952c5';
+        const channel = 'kartik';
+        const token = '007eJxTYIgz3cpqcO4G54mNp/Xt5jtoexj+ltzjZ3y/423ptFMvrhkoMCSZGFummackpqYkmZtYWCRaGJmkWZiYJRsmmliaGiWbbhY5nNEQyMgwMa6UlZEBAkF8NobsxKKSzGwGBgCNFCBq';
+        const uid = 0;
+
+        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+
+        function log(message) {
+            console.log(message);
+            logsDiv.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+        }
+
+        // Set up event listeners
+        client.on('connection-state-change', (curState, revState, reason) => {
+            log(`Connection state changed: ${curState} (was: ${revState}) - Reason: ${reason}`);
+            statusDiv.textContent = `Connection State: ${curState}`;
+        });
+
+        client.on('user-joined', (user) => {
+            log(`User joined: ${user.uid}`);
+        });
+
+        client.on('user-left', (user) => {
+            log(`User left: ${user.uid}`);
+        });
+
+        client.on('token-privilege-will-expire', () => {
+            log('Token privilege will expire');
+        });
+
+        client.on('token-privilege-expired', () => {
+            log('Token privilege expired');
+        });
+
+        client.on('exception', (event) => {
+            log(`Exception: ${JSON.stringify(event)}`);
+        });
+
+        // Test connection
+        log('Starting connection test...');
+        log(`App ID: ${appId}`);
+        log(`Channel: ${channel}`);
+        log(`UID: ${uid}`);
+        log(`Token: ${token.substring(0, 20)}...`);
+
+        client.join(appId, channel, token, uid)
+            .then(() => {
+                log('✅ Successfully joined channel');
+                statusDiv.textContent = 'Status: Connected Successfully';
+                statusDiv.style.color = 'green';
+                
+                // Leave after 5 seconds for testing
+                setTimeout(() => {
+                    client.leave().then(() => {
+                        log('Left channel for testing');
+                        statusDiv.textContent = 'Status: Test completed - Left channel';
+                    });
+                }, 5000);
+            })
+            .catch(err => {
+                log(`❌ Failed to join channel: ${err.message}`);
+                log(`Error code: ${err.code}`);
+                log(`Full error: ${JSON.stringify(err)}`);
+                statusDiv.textContent = 'Status: Connection Failed';
+                statusDiv.style.color = 'red';
+            });
+    </script>
+</body>
+</html>

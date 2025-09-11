@@ -91,6 +91,22 @@ service cloud.firestore {
       }
     }
 
+    // Video call sessions
+    match /video_call_sessions/{sessionId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.lawyerId || 
+         request.auth.uid == resource.data.clientId);
+      allow create: if request.auth != null &&
+        (request.auth.uid == request.resource.data.lawyerId || 
+         request.auth.uid == request.resource.data.clientId);
+      allow update: if request.auth != null &&
+        (request.auth.uid == resource.data.lawyerId || 
+         request.auth.uid == resource.data.clientId);
+      allow delete: if request.auth != null &&
+        (request.auth.uid == resource.data.lawyerId || 
+         request.auth.uid == resource.data.clientId);
+    }
+
     // Notifications
     match /notifications/{notificationId} {
       allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;

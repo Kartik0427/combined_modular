@@ -2,7 +2,7 @@
 import React from 'react';
 import { Clock, User, MessageSquare, Phone, Video, Check, X } from 'lucide-react';
 
-const ConsultationRequestCard = ({ request, onUpdateStatus }) => {
+const ConsultationRequestCard = ({ request, onUpdateStatus, onStartSession }) => {
   const getServiceIcon = (serviceType) => {
     switch (serviceType) {
       case 'audio':
@@ -111,7 +111,10 @@ const ConsultationRequestCard = ({ request, onUpdateStatus }) => {
 
       {request.status === 'accepted' && (
         <div className="flex gap-3">
-          <button className="flex-1 bg-gradient-to-r from-[#9A8C98] to-[#C9ADA7] text-white py-3 rounded-2xl font-medium hover:from-[#C9ADA7] hover:to-[#F2E9E4] hover:text-[#22223B] transition-all">
+          <button 
+            onClick={() => onStartSession && onStartSession(request)}
+            className="flex-1 bg-gradient-to-r from-[#9A8C98] to-[#C9ADA7] text-white py-3 rounded-2xl font-medium hover:from-[#C9ADA7] hover:to-[#F2E9E4] hover:text-[#22223B] transition-all"
+          >
             Start Session
           </button>
           <button

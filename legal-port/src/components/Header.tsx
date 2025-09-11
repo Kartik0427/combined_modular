@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Scale, MessageSquare } from 'lucide-react'; // Import MessageSquare icon
+import { Scale, MessageSquare, Video } from 'lucide-react'; // Import MessageSquare and Video icons
 import { User } from 'firebase/auth';
 import UserMenu from './UserMenu'; // Assuming UserMenu component exists
 import { subscribeToUnreadCounts, getTotalUnreadCount } from '../services/notificationService';
 import { updateOnlineStatus, updateUserOnlineStatus } from '../services/onlineStatusService';
+import { VideoCallService } from '../services/videoCallService';
 
 interface HeaderProps {
   user: User | null;
   onAuthClick: () => void;
   onSignOut: () => void;
   onChatClick?: () => void; // Add onChatClick prop
+  onVideoCallClick?: () => void; // Add onVideoCallClick prop
 }
 
-const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
+const Header = ({ user, onAuthClick, onSignOut, onChatClick, onVideoCallClick }: HeaderProps) => {
   const [unreadCount, setUnreadCount] = useState(0);
+  const [videoCallService] = useState(() => new VideoCallService());
+  const [activeVideoSessions, setActiveVideoSessions] = useState(0);
 
   // Subscribe to unread messages
   useEffect(() => {
@@ -25,6 +29,20 @@ const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
 
     return unsubscribe;
   }, [user?.uid]);
+
+  // Subscribe to video call sessions
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsubscribe = videoCallService.listenForSessionUpdates(user.uid, (sessions) => {
+      const activeSessions = sessions.filter(session => 
+        session.status === 'waiting' || session.status === 'active'
+      );
+      setActiveVideoSessions(activeSessions.length);
+    });
+
+    return unsubscribe;
+  }, [user?.uid, videoCallService]);
 
   // Update online status when user logs in/out
   useEffect(() => {
@@ -88,6 +106,23 @@ const Header = ({ user, onAuthClick, onSignOut, onChatClick }: HeaderProps) => {
                 )}
               </div>
               <span className="hidden md:inline">Chats</span>
+            </button>
+          )}
+          {user && onVideoCallClick && (
+            <button
+              onClick={onVideoCallClick}
+              className="relative flex items-center gap-2 text-white hover:text-gold transition-colors"
+              title="Video Calls"
+            >
+              <div className="relative">
+                <Video className="w-5 h-5" />
+                {activeVideoSessions > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    {activeVideoSessions > 99 ? '99+' : activeVideoSessions}
+                  </span>
+                )}
+              </div>
+              <span className="hidden md:inline">Video Calls</span>
             </button>
           )}
           {user ? (
