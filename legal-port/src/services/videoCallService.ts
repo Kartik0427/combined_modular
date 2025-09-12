@@ -58,7 +58,11 @@ export class VideoCallService {
    */
   private initializeClient(): void {
     try {
-      console.log('[Init] Agora client init started...');
+      if (this.client) {
+        console.log('VideoCallService: Client already initialized');
+        return;
+      }
+
       this.client = AgoraRTC.createClient({
         mode: 'rtc',
         codec: 'vp8'
@@ -66,9 +70,10 @@ export class VideoCallService {
 
       this.setupEventHandlers();
       
-      console.log('[Init] Agora client initialized!');
+      console.log('VideoCallService: Client initialized successfully');
     } catch (error) {
       console.error('VideoCallService: Failed to initialize client:', error);
+      this.client = null;
       throw new Error(`Failed to initialize Agora client: ${error}`);
     }
   }
@@ -83,13 +88,13 @@ export class VideoCallService {
     this.client.on('user-joined', (user) => {
       console.log('VideoCallService: User joined:', user.uid);
       this.remoteUsers.set(user.uid, { uid: user.uid });
-      this.onUserJoined?.(user.uid);
+      if (this.onUserJoined) this.onUserJoined(user.uid);
     });
 
     this.client.on('user-left', (user) => {
       console.log('VideoCallService: User left:', user.uid);
       this.remoteUsers.delete(user.uid);
-      this.onUserLeft?.(user.uid);
+      if (this.onUserLeft) this.onUserLeft(user.uid);
     });
 
     this.client.on('user-published', async (user, mediaType) => {
@@ -107,9 +112,7 @@ export class VideoCallService {
         }
         
         this.remoteUsers.set(user.uid, remoteUser);
-        if (mediaType === 'video' || mediaType === 'audio') {
-          this.onUserPublished?.(user.uid, mediaType as 'video' | 'audio');
-        }
+        if (this.onUserPublished) this.onUserPublished(user.uid, mediaType as 'video' | 'audio');
       } catch (error) {
         console.error('VideoCallService: Failed to subscribe to user:', error);
       }
@@ -128,30 +131,30 @@ export class VideoCallService {
         this.remoteUsers.set(user.uid, remoteUser);
       }
       
-      this.onUserUnpublished?.(user.uid, mediaType as 'video' | 'audio');
+      if (this.onUserUnpublished) this.onUserUnpublished(user.uid, mediaType as 'video' | 'audio');
     });
 
     // Connection events
     this.client.on('connection-state-change', (curState, revState, reason) => {
       console.log('VideoCallService: Connection state changed:', curState, 'Reason:', reason);
-      this.onConnectionStateChanged?.(curState, reason || '');
+      if (this.onConnectionStateChanged) this.onConnectionStateChanged(curState, reason || '');
     });
 
     // Network quality events
     this.client.on('network-quality', (stats) => {
-      this.onNetworkQualityChanged?.(stats);
+      if (this.onNetworkQualityChanged) this.onNetworkQualityChanged(stats);
     });
 
     // Token events
     this.client.on('token-privilege-will-expire', () => {
       console.log('VideoCallService: Token privilege will expire');
-      this.onTokenPrivilegeWillExpire?.();
+      if (this.onTokenPrivilegeWillExpire) this.onTokenPrivilegeWillExpire();
       this.handleTokenRenewal();
     });
 
     this.client.on('token-privilege-expired', () => {
       console.log('VideoCallService: Token privilege expired');
-      this.onTokenPrivilegeExpired?.();
+      if (this.onTokenPrivilegeExpired) this.onTokenPrivilegeExpired();
       this.handleTokenRenewal();
     });
 
@@ -243,17 +246,24 @@ export class VideoCallService {
   }
 
   /**
+   * Ensure client is initialized
+   */
+  private ensureClientInitialized(): void {
+    if (!this.client) {
+      console.log('VideoCallService: Client not initialized, reinitializing...');
+      this.initializeClient();
+    }
+    
+    if (!this.client) {
+      throw new Error('Failed to initialize Agora client');
+    }
+  }
+
+  /**
    * Join a video call channel
    */
   public async joinChannel(channelName: string, uid: UID): Promise<void> {
-    if (!this.client) {
-      console.warn('joinChannel: Client was null, reinitializing...');
-      this.initializeClient();
-    }
-
-    if (!this.client) {
-      throw new Error('Client not initialized');
-    }
+    this.ensureClientInitialized();
 
     if (this.isJoined) {
       throw new Error('Already joined a channel');
@@ -261,10 +271,25 @@ export class VideoCallService {
 
     try {
       console.log('VideoCallService: Joining channel:', channelName, 'UID:', uid);
+      
+      // Get token from server
       const token = await this.fetchToken(channelName, uid);
+      
+      // Using working hardcoded App ID
       const appId = 'b439f7daedb7488a824f846c1a4952c5';
-
-      await this.client.join(appId, channelName, token, uid);
+      
+      console.log('VideoCallService: App ID:', appId);
+      console.log('VideoCallService: Channel:', channelName);
+      console.log('VideoCallService: UID:', uid);
+      console.log('VideoCallService: Token:', token.substring(0, 20) + '...');
+      
+      // Join the channel with working parameters
+      await this.client.join(
+        appId,
+        channelName,
+        token,
+        uid
+      );
 
       this.isJoined = true;
       this.currentChannelName = channelName;
@@ -281,7 +306,9 @@ export class VideoCallService {
    * Publish local tracks to the channel
    */
   public async publishTracks(): Promise<void> {
-    if (!this.client || !this.isJoined) {
+    this.ensureClientInitialized();
+    
+    if (!this.isJoined) {
       throw new Error('Not joined to any channel');
     }
 

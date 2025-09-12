@@ -56,7 +56,10 @@ const VideoCallPage = ({ setCurrentPage }) => {
       updateRemoteUsers();
       
       if (mediaType === 'video') {
-        renderRemoteVideo(uid);
+        // Delay rendering to ensure DOM element is ready
+        setTimeout(() => {
+          renderRemoteVideo(uid);
+        }, 200);
       }
     };
 
@@ -92,22 +95,45 @@ const VideoCallPage = ({ setCurrentPage }) => {
   const updateRemoteUsers = () => {
     const users = videoCallService.getAllRemoteUsers();
     setRemoteUsers(users);
+    
+    // Re-render videos for all remote users
+    users.forEach(user => {
+      if (user.videoTrack) {
+        setTimeout(() => {
+          renderRemoteVideo(user.uid);
+        }, 100);
+      }
+    });
   };
 
   const renderLocalVideo = () => {
-    const localVideoTrack = videoCallService.getLocalVideoTrack();
-    if (localVideoTrack && localVideoRef.current) {
-      localVideoTrack.play(localVideoRef.current);
-    }
+    setTimeout(() => {
+      const localVideoTrack = videoCallService.getLocalVideoTrack();
+      if (localVideoTrack && localVideoRef.current) {
+        try {
+          localVideoTrack.play(localVideoRef.current);
+          console.log('Local video rendered successfully');
+        } catch (error) {
+          console.error('Failed to render local video:', error);
+        }
+      }
+    }, 100);
   };
 
   const renderRemoteVideo = (uid) => {
-    const remoteUser = videoCallService.getRemoteUser(uid);
-    const videoElement = remoteVideoRefs.current[uid];
-    
-    if (remoteUser?.videoTrack && videoElement) {
-      remoteUser.videoTrack.play(videoElement);
-    }
+    setTimeout(() => {
+      const remoteUser = videoCallService.getRemoteUser(uid);
+      const videoElement = remoteVideoRefs.current[uid];
+      
+      if (remoteUser?.videoTrack && videoElement) {
+        try {
+          remoteUser.videoTrack.play(videoElement);
+          console.log('Remote video rendered successfully for UID:', uid);
+        } catch (error) {
+          console.error('Failed to render remote video for UID:', uid, error);
+        }
+      }
+    }, 100);
   };
 
   const startVideoCall = async () => {
@@ -143,8 +169,10 @@ const VideoCallPage = ({ setCurrentPage }) => {
       // Update session status to active
       await videoCallService.updateSessionStatus(session.id, 'active');
       
-      // Render local video
-      renderLocalVideo();
+      // Render local video with delay to ensure DOM is ready
+      setTimeout(() => {
+        renderLocalVideo();
+      }, 300);
       
       toast.success('Video call started successfully');
     } catch (error) {
@@ -330,7 +358,17 @@ const VideoCallPage = ({ setCurrentPage }) => {
                   remoteUsers.map((user) => (
                     <div key={user.uid} className="w-full h-full relative">
                       <div
-                        ref={el => remoteVideoRefs.current[user.uid] = el}
+                        ref={el => { 
+                          if (el) {
+                            remoteVideoRefs.current[user.uid] = el;
+                            // Render video immediately when ref is set
+                            if (user.videoTrack) {
+                              setTimeout(() => {
+                                renderRemoteVideo(user.uid);
+                              }, 50);
+                            }
+                          }
+                        }}
                         className="w-full h-full"
                       />
                       <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
